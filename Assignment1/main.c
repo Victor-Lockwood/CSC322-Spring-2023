@@ -65,7 +65,12 @@ int main() {
     //Initialize the rooms and get a pointer to the array of structs back
     struct Room* rooms = initializeRooms(numberOfRooms);
 
-    printf("First room state: %i\n", rooms[0].state);
+    //printf("First room state: %i\n", rooms[0].state);
+
+    int
+    //Initialize the creatures and get a pointer to the array of structs back
+    //TODO: Move this out to a function
+
 
     free(rooms);
     return 0;
