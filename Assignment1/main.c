@@ -67,7 +67,7 @@ int main() {
 
     //printf("First room state: %i\n", rooms[0].state);
 
-    int
+    //int
     //Initialize the creatures and get a pointer to the array of structs back
     //TODO: Move this out to a function
 
