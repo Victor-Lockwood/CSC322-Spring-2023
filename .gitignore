@@ -1,6 +1,6 @@
 # Debug
-Assignment1/cmake-build-debug/
-Assignment1/.idea
+cmake-build-debug/
+.idea/
 
 # Prerequisites
 *.d
