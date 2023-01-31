@@ -105,25 +105,44 @@ int main() {
     printf("Current room: %i\n", currentRoom->id);
 
     //Here we gooooo!!!
+    bool isUserExit = false;
+    int max_size = 256;
+    char *command = malloc(max_size);
 
     while(respect > 0 && respect < 80) {
-        //16 is a nice, round number that should give us enough space
-        char command[16];
-        scanf("%s", command);
+
+        //scanf doesn't like input with spaces, plus apparently this is safer
+        //in regard to buffer overflows and stuff
+        fgets(command, max_size, stdin);
+
+        //Assistance from here: https://stackoverflow.com/questions/1247989/how-do-you-allow-spaces-to-be-entered-using-scanf
+        //This trims out a new line if one's there
+        if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n'))
+            command[strlen (command) - 1] = '\0';
 
         if(strcmp(command, "exit") == 0) {
             //Leave the loop, self-explanatory
+            isUserExit = true;
             break;
         } else if(strcmp(command, "get ye flask") == 0) {
             //Easter egg - don't worry about it
-            printf("You can't get ye flask!");
+            printf("You can't get ye flask!\n");
         }
     }
 
-    printf("Goodbye!");
+    if(isUserExit){
+        printf("Goodbye!");
+    } else if(respect <= 0){
+        printf("Everyone dislikes your presence!  You lose.");
+    } else if(respect >= 80){
+        //Could just be an else but if the user leaves the loop otherwise
+        //somehow I'd prefer to have nothing happen over undo praise
+        printf("Congrats!  Your presence was appreciated!  You win!");
+    }
 
     free(rooms);
     free(creatures);
+    free(command);
     return 0;
 }
 
