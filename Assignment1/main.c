@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
 
 
 // *** STRUCTS ***
@@ -35,7 +37,7 @@ struct Room {
     int westRoomId;
 
     //Array of pointers to the creatures in the room
-    //This is nit an array of Creatures as that would make moving them around to different
+    //This is not an array of Creatures as that would make moving them around to different
     //rooms a major pain
     struct Creature *creatures[10];
 };
@@ -47,6 +49,8 @@ struct Room* initializeRooms(int);
 struct Creature* initializeCreatures(int, struct Room[]);
 
 // *** GLOBALS ***
+
+struct Room* currentRoom = NULL;
 
 //Main metric of the game
 //If this hits 0 or under, player loses
@@ -98,7 +102,25 @@ int main() {
     //Initialize the creatures and get a pointer to the array of structs back
     struct Creature* creatures = initializeCreatures(numberOfCreatures, rooms);
 
-    //printf("Rooms first pointer: %p", rooms[0].creatures[0]);
+    printf("Current room: %i\n", currentRoom->id);
+
+    //Here we gooooo!!!
+
+    while(respect > 0 && respect < 80) {
+        //16 is a nice, round number that should give us enough space
+        char command[16];
+        scanf("%s", command);
+
+        if(strcmp(command, "exit") == 0) {
+            //Leave the loop, self-explanatory
+            break;
+        } else if(strcmp(command, "get ye flask") == 0) {
+            //Easter egg - don't worry about it
+            printf("You can't get ye flask!");
+        }
+    }
+
+    printf("Goodbye!");
 
     free(rooms);
     free(creatures);
@@ -109,6 +131,7 @@ struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[])
 
 
     struct Creature* creatures = malloc(numberOfCreatures * sizeof(struct Creature));
+    int roomCapacity = 10;
 
     //rooms[0].creatures[0] = &creatures[0];
     for(int i = 0; i < numberOfCreatures; i++) {
@@ -120,7 +143,7 @@ struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[])
         //Grab the five numbers given in the input.
         //In order, they are: creatureType, roomId
         //TODO: Check inputs
-        for(int j = 0; j < numberOfCreatures; j++) {
+        for(int j = 0; j < inputSize; j++) {
             scanf("%i", &inputArray[j]);
         }
 
@@ -132,6 +155,21 @@ struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[])
                 };
 
         creatures[i] = creature;
+
+        //Stick the creature's pointer into the first empty slot
+        //of the pointer array of the room it's associated with
+        for(int j = 0; j < roomCapacity; j++) {
+            if(rooms[creature.roomId].creatures[j] == NULL) {
+                rooms[creature.roomId].creatures[j] = &creature;
+                continue;
+            }
+        }
+
+        //If the creature is the PC, set the currentRoom pointer
+        //to the address of its associated room
+        if(creature.creatureType == 0) {
+            currentRoom = &rooms[creature.roomId];
+        }
     }
 
     return creatures;
