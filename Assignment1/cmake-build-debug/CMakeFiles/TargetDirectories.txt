@@ -1,3 +1,3 @@
-C:/Users/victo/Documents/SUNY Oswego/Spring 23/CSC322/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/Assignment1.dir
-C:/Users/victo/Documents/SUNY Oswego/Spring 23/CSC322/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/victo/Documents/SUNY Oswego/Spring 23/CSC322/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/Assignment1.dir
+/home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug/CMakeFiles/rebuild_cache.dir

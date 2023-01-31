@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 
 // *** STRUCTS ***
@@ -34,6 +35,8 @@ struct Room {
     int westRoomId;
 
     //Array of pointers to the creatures in the room
+    //This is nit an array of Creatures as that would make moving them around to different
+    //rooms a major pain
     struct Creature *creatures[10];
 };
 
@@ -41,6 +44,7 @@ struct Room {
 // *** FUNCTION PROTOTYPES ***
 
 struct Room* initializeRooms(int);
+struct Creature* initializeCreatures(int, struct Room[]);
 
 // *** GLOBALS ***
 
@@ -57,23 +61,80 @@ int main() {
            " \\___|_|  \\___|\\__,_|\\__|\\__,_|_|  \\___|  \\__, |\\__,_|_| |_| |_|\\___|\n"
            "                                           __/ |                     \n"
            "                                          |___/ \n");
-    int numberOfRooms = 0;
 
-    printf("Please enter the number of rooms:\n");
-    scanf("%i", &numberOfRooms);
+    int numberOfCreatures = 0;
+    int numberOfRooms = 0;
+    bool isValid = false;
+
+    //Get the number of rooms to create, validating the input is within range
+    while(!isValid) {
+        printf("Please enter the number of rooms (between 1 and 100 inclusive):\n");
+        scanf("%i", &numberOfRooms);
+
+        if(numberOfRooms <= 100 && numberOfRooms >= 1) {
+            isValid = true;
+        } else {
+            printf("Invalid input.\n");
+        }
+    }
+    isValid = false;
 
     //Initialize the rooms and get a pointer to the array of structs back
     struct Room* rooms = initializeRooms(numberOfRooms);
 
-    //printf("First room state: %i\n", rooms[0].state);
+    //Get the number of creatures to create, validating the input is within range
+    while(!isValid){
+        printf("Please enter the number of creatures (between 1 and 100 inclusive):\n");
+        scanf("%i", &numberOfCreatures);
 
-    //int
+        if(numberOfCreatures <= 100 && numberOfCreatures >=1) {
+            isValid = true;
+        } else {
+            printf("Invalid input.\n");
+        }
+    }
+    isValid = false;
+
     //Initialize the creatures and get a pointer to the array of structs back
-    //TODO: Move this out to a function
+    struct Creature* creatures = initializeCreatures(numberOfCreatures, rooms);
 
+    //printf("Rooms first pointer: %p", rooms[0].creatures[0]);
 
     free(rooms);
+    free(creatures);
     return 0;
+}
+
+struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[]) {
+
+
+    struct Creature* creatures = malloc(numberOfCreatures * sizeof(struct Creature));
+
+    //rooms[0].creatures[0] = &creatures[0];
+    for(int i = 0; i < numberOfCreatures; i++) {
+        int inputSize = 2; //not strictly necessary but makes me feel better
+        int inputArray[inputSize];
+
+        printf("Enter inputs for Creature #%i: \n", i);
+
+        //Grab the five numbers given in the input.
+        //In order, they are: creatureType, roomId
+        //TODO: Check inputs
+        for(int j = 0; j < numberOfCreatures; j++) {
+            scanf("%i", &inputArray[j]);
+        }
+
+        struct Creature creature =
+                {
+                    .id = i,
+                    .creatureType = inputArray[0],
+                    .roomId = inputArray[1]
+                };
+
+        creatures[i] = creature;
+    }
+
+    return creatures;
 }
 
 //Initialize the rooms and return a pointer to the array.  The array is dynamically
@@ -82,18 +143,21 @@ struct Room *initializeRooms(int numberOfRooms) {
     struct Room* rooms = malloc(numberOfRooms * sizeof(struct Room));
 
     for(int i = 0; i < numberOfRooms; i++) {
-        int inputSize = 5;
+        int inputSize = 5; //not strictly necessary but makes me feel better
         int inputArray[inputSize];
+
+        printf("Enter inputs for room #%i: \n", i);
 
         //Grab the five numbers given in the input.
         //In order, they are: state, north, south, east, west
-        printf("Enter inputs for room #%i: \n", i);
+        //TODO: Check inputs
         for(int j = 0; j < inputSize; j ++){
             scanf("%i", &inputArray[j]);
         }
 
         struct Room room =
-                { .id = i,
+                {
+                        .id = i,
                         .state = inputArray[0],
                         .northRoomId = inputArray[1],
                         .southRoomId = inputArray[2],
