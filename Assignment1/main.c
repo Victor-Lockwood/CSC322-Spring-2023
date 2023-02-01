@@ -45,12 +45,13 @@ struct Room {
 
 // *** FUNCTION PROTOTYPES ***
 
-struct Room* initializeRooms(int);
-struct Creature* initializeCreatures(int, struct Room[]);
+void initializeRooms(int);
+void initializeCreatures(int);
 void look(void);
 
 // *** GLOBALS ***
-
+struct Creature* creatures;
+struct Room* rooms;
 struct Room* currentRoom = NULL;
 
 //Main metric of the game
@@ -84,8 +85,8 @@ int main() {
     }
     isValid = false;
 
-    //Initialize the rooms and get a pointer to the array of structs back
-    struct Room* rooms = initializeRooms(numberOfRooms);
+    //Initialize the rooms
+    initializeRooms(numberOfRooms);
 
     //Get the number of creatures to create, validating the input is within range
     while(!isValid){
@@ -100,8 +101,8 @@ int main() {
     }
     isValid = false;
 
-    //Initialize the creatures and get a pointer to the array of structs back
-    struct Creature* creatures = initializeCreatures(numberOfCreatures, rooms);
+    //Initialize the creatures
+    initializeCreatures(numberOfCreatures);
 
     printf("Current room: %i\n", currentRoom->id);
 
@@ -202,10 +203,8 @@ void look() {
     }
 }
 
-struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[]) {
-
-
-    struct Creature* creatures = malloc(numberOfCreatures * sizeof(struct Creature));
+void initializeCreatures(int numberOfCreatures) {
+    creatures = malloc(numberOfCreatures * sizeof(struct Creature));
     int roomCapacity = 10;
 
     //rooms[0].creatures[0] = &creatures[0];
@@ -217,45 +216,46 @@ struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[])
 
         //Grab the five numbers given in the input.
         //In order, they are: creatureType, roomId
-        //TODO: Check inputs
         for(int j = 0; j < inputSize; j++) {
             scanf("%i", &inputArray[j]);
         }
 
-        struct Creature creature =
-                {
-                    .id = i,
-                    .creatureType = inputArray[0],
-                    .roomId = inputArray[1]
-                };
+        struct Creature* activeCreaturePointer = creatures + (sizeof(struct Creature) * i);
+        //struct Creature creature = *activeCreaturePointer;
 
-        creatures[i] = creature;
+        activeCreaturePointer->id = i;
+        activeCreaturePointer->creatureType = inputArray[0];
+        activeCreaturePointer->roomId = inputArray[1];
+
+        struct Room* activeRoom = rooms + (sizeof(struct Room) * activeCreaturePointer->roomId);
 
         //Stick the creature's pointer into the first empty slot
         //of the pointer array of the room it's associated with
         for(int j = 0; j < roomCapacity; j++) {
-            if(rooms[creature.roomId].creatures[j] == NULL) {
-                rooms[creature.roomId].creatures[j] = &creature;
+
+            if(activeRoom->creatures[j] == NULL) {
+                activeRoom->creatures[j] = activeCreaturePointer;
                 break;
             }
         }
 
         //If the creature is the PC, set the currentRoom pointer
         //to the address of its associated room
-        if(creature.creatureType == 0) {
-            currentRoom = &rooms[creature.roomId];
+        if(activeCreaturePointer->creatureType == 0) {
+            currentRoom = activeRoom;
         }
     }
 
-    return creatures;
 }
 
 //Initialize the rooms and return a pointer to the array.  The array is dynamically
 //allocated and must be freed when no longer in use.
-struct Room *initializeRooms(int numberOfRooms) {
-    struct Room* rooms = malloc(numberOfRooms * sizeof(struct Room));
+void initializeRooms(int numberOfRooms) {
+    rooms = malloc(numberOfRooms * sizeof(struct Room));
 
     for(int i = 0; i < numberOfRooms; i++) {
+
+
         int inputSize = 5; //not strictly necessary but makes me feel better
         int inputArray[inputSize];
 
@@ -268,25 +268,21 @@ struct Room *initializeRooms(int numberOfRooms) {
             scanf("%i", &inputArray[j]);
         }
 
-        struct Room room =
-                {
-                        .id = i,
-                        .state = inputArray[0],
-                        .northRoomId = inputArray[1],
-                        .southRoomId = inputArray[2],
-                        .eastRoomId = inputArray[3],
-                        .westRoomId = inputArray[4]
-                };
+        struct Room* activeRoomPointer = rooms + (sizeof(struct Room) * i);
+
+        activeRoomPointer->id = i;
+        activeRoomPointer->state = inputArray[0];
+        activeRoomPointer->northRoomId = inputArray[1];
+        activeRoomPointer->southRoomId = inputArray[2];
+        activeRoomPointer->eastRoomId = inputArray[3];
+        activeRoomPointer->westRoomId = inputArray[4];
 
         //clear out the creature pointer array
         for(int j = 0; j < 10; j++) {
-            room.creatures[j] = NULL;
+            activeRoomPointer->creatures[j] = NULL;
         }
 
-        //stick the struct in the rooms array
-        rooms[i] = room;
     }
 
-    return rooms;
 }
 
