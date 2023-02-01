@@ -47,6 +47,7 @@ struct Room {
 
 struct Room* initializeRooms(int);
 struct Creature* initializeCreatures(int, struct Room[]);
+void look(void);
 
 // *** GLOBALS ***
 
@@ -127,6 +128,8 @@ int main() {
         } else if(strcmp(command, "get ye flask") == 0) {
             //Easter egg - don't worry about it
             printf("You can't get ye flask!\n");
+        } else if(strcmp(command, "look") == 0) {
+            look();
         }
     }
 
@@ -144,6 +147,59 @@ int main() {
     free(creatures);
     free(command);
     return 0;
+}
+
+//We do a lil lookin
+void look() {
+    printf("Room %i, ", currentRoom->id);
+
+    switch(currentRoom->state){
+        case 0:
+            printf("dirty, ");
+            break;
+        case 1:
+            printf("half-dirty, ");
+            break;
+        case 2:
+            printf("dirty, ");
+            break;
+    }
+
+    if(currentRoom->eastRoomId == currentRoom->northRoomId == currentRoom->southRoomId == currentRoom->westRoomId == -1){
+        printf("no neighbors, ");
+    } else {
+        printf("neighbors ");
+    }
+
+    if(currentRoom->northRoomId != -1) {
+        printf("%i to the north, ", currentRoom->northRoomId);
+    }
+    if(currentRoom->southRoomId != -1){
+        printf("%i to the south, ", currentRoom->northRoomId);
+    }
+    if(currentRoom->eastRoomId != -1){
+        printf("%i to the east, ", currentRoom->eastRoomId);
+    }
+    if(currentRoom->westRoomId != -1) {
+        printf("%i to the west, ", currentRoom->westRoomId);
+    }
+
+    printf("contains \n");
+
+    for(int i = 0; i < 10; i++){
+        struct Creature *creature = currentRoom->creatures[i];
+        if (creature == NULL) {
+            continue;
+        }
+
+        if(creature->creatureType == 0) {
+            printf("PC\n");
+        } else if(creature->creatureType == 1) {
+            printf("animal %i\n", creature->id);
+        } else {
+            printf("NPC %i\n", creature->id);
+        }
+    }
 }
 
 struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[]) {
@@ -180,7 +236,7 @@ struct Creature *initializeCreatures(int numberOfCreatures, struct Room rooms[])
         for(int j = 0; j < roomCapacity; j++) {
             if(rooms[creature.roomId].creatures[j] == NULL) {
                 rooms[creature.roomId].creatures[j] = &creature;
-                continue;
+                break;
             }
         }
 
