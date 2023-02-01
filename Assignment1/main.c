@@ -44,13 +44,21 @@ struct Room {
 
 // *** FUNCTION PROTOTYPES ***
 
+// Scaffolding
 void initializeRooms(int);
-void initializeCreatures(int);
+int initializeCreatures(int);
+
+// Actions
 void look(void);
 void clean(int);
+void dirty(int);
+void move(int, int);
 
+// Helper functions
 struct Room* getRoomPointerFromId(int);
 struct Creature* getCreaturePointerFromId(int);
+
+bool commandHandler(int, char *command, int);
 
 // *** GLOBALS ***
 
@@ -68,6 +76,7 @@ struct Room* currentRoom = NULL;
 //If this hits 80 or above, player wins
 int respect = 40;
 
+
 int main() {
     printf("                    | |                                              \n"
            "  ___ _ __ ___  __ _| |_ _   _ _ __ ___    __ _  __ _ _ __ ___   ___ \n"
@@ -79,6 +88,7 @@ int main() {
 
     int numberOfCreatures = 0;
     int numberOfRooms = 0;
+    int pcId;
     bool isValid = false;
 
     //Get the number of rooms to create, validating the input is within range
@@ -110,7 +120,8 @@ int main() {
     }
     isValid = false;
 
-    initializeCreatures(numberOfCreatures);
+    //We get the player's id back
+    pcId = initializeCreatures(numberOfCreatures);
 
     printf("Current room: %i\n", currentRoom->id);
 
@@ -119,29 +130,11 @@ int main() {
     int max_size = 256;
     char *command = malloc(max_size);
 
-    while(respect > 0 && respect < 80) {
-
-        //scanf doesn't like input with spaces, plus apparently this is safer
-        //in regard to buffer overflows and stuff
-        fgets(command, max_size, stdin);
-
-        //Assistance from here: https://stackoverflow.com/questions/1247989/how-do-you-allow-spaces-to-be-entered-using-scanf
-        //This trims out a new line if one's there
-        if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n'))
-            command[strlen (command) - 1] = '\0';
-
-        if(strcmp(command, "exit") == 0) {
-            //Leave the loop, self-explanatory
-            isUserExit = true;
-            break;
-        } else if(strcmp(command, "get ye flask") == 0) {
-            //Easter egg - never you mind
-            printf("You can't get ye flask!\n");
-        } else if(strcmp(command, "look") == 0) {
-            look();
-        } else if(strcmp(command, "clean") == 0) {
-
-        }
+    getchar();
+    while(respect > 0 && respect < 80 && !isUserExit) {
+        // commandHandler takes care of user input - it's going to get long,
+        // so I'd rather it get long down there rather than up here
+        isUserExit = commandHandler(max_size, command, pcId);
     }
 
     if(isUserExit){
@@ -160,6 +153,63 @@ int main() {
     return 0;
 }
 
+// Handles user input and executes actions accordingly
+bool commandHandler(int max_size, char *command, int pcId) {
+
+    //scanf doesn't like input with spaces, plus apparently this is safer
+    //in regard to buffer overflows and stuff
+    fgets(command, max_size, stdin);
+
+    //Assistance from here: https://stackoverflow.com/questions/1247989/how-do-you-allow-spaces-to-be-entered-using-scanf
+    //This trims out a new line if one's there
+    if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n'))
+        command[strlen (command) - 1] = '\0';
+
+    //Big ol' if-else-if chunk to handle inputs
+    if(strcmp(command, "exit") == 0) {
+        //Leave the loop, self-explanatory
+        return true;
+    } else if(strcmp(command, "get ye flask") == 0) {
+        // Never you mind
+        printf("You can't get ye flask!\n");
+    } else if(strcmp(command, "look") == 0) {
+        look();
+    } else if(strcmp(command, "clean") == 0) {
+        clean(-1);
+    } else if(strcmp(command, "dirty") == 0) {
+        dirty(-1);
+    } else if(strcmp(command, "north") == 0){
+        if(currentRoom->northRoomId != -1){
+            move(currentRoom->northRoomId, pcId);
+        } else {
+            printf("You gaze into the void.  The void gazes back.  There is no room to the north, so here you remain.\n");
+        }
+    } else if(strcmp(command, "south") == 0) {
+        if(currentRoom->southRoomId != -1){
+            move(currentRoom->southRoomId, pcId);
+        } else {
+            printf("You gaze into the void.  The void gazes back.  There is no room to the south, so here you remain.\n");
+        }
+    } else if(strcmp(command, "east") == 0){
+        if(currentRoom->eastRoomId != -1){
+            move(currentRoom->eastRoomId, pcId);
+        } else {
+            printf("You gaze into the void.  The void gazes back.  There is no room to the east, so here you remain.\n");
+        }
+    } else if(strcmp(command, "west") == 0) {
+        if(currentRoom->westRoomId != -1){
+            move(currentRoom->westRoomId, pcId);
+        } else {
+            printf("You gaze into the void.  The void gazes back.  There is no room to the west, so here you remain.\n");
+        }
+    } else {
+        printf("Invalid command.\n");
+    }
+
+    return false;
+}
+
+
 // Given a room's id, return its pointer
 // TODO: Some sort of check to see if the room exists should be in place.  Preferably not here, but putting the note here while I think of it.
 struct Room* getRoomPointerFromId(int roomId) {
@@ -174,13 +224,13 @@ struct Creature* getCreaturePointerFromId(int creatureId) {
     return activeCreaturePointer;
 }
 
+
 // Initialize the rooms and set the global pointer to the array of set rooms.
 // The array is dynamically allocated and must be freed when no longer in use.
 void initializeRooms(int numberOfRooms) {
     rooms = malloc(numberOfRooms * sizeof(struct Room));
 
     for(int i = 0; i < numberOfRooms; i++) {
-
 
         int inputSize = 5; //not strictly necessary but makes me feel better
         int inputArray[inputSize];
@@ -216,9 +266,10 @@ void initializeRooms(int numberOfRooms) {
 // well as stick the pointer of each creature into the associated creature list
 // of the room it's in and set currentRoom to the pointer of the room the PC is in.
 // The array is dynamically allocated and must be freed when no longer in use.
-void initializeCreatures(int numberOfCreatures) {
+int initializeCreatures(int numberOfCreatures) {
     creatures = malloc(numberOfCreatures * sizeof(struct Creature));
     int roomCapacity = 10;
+    int pcId = -1;
 
     //rooms[0].creatures[0] = &creatures[0];
     for(int i = 0; i < numberOfCreatures; i++) {
@@ -256,9 +307,11 @@ void initializeCreatures(int numberOfCreatures) {
         //to the address of its associated room
         if(activeCreaturePointer->creatureType == 0) {
             currentRoom = activeRoom;
+            pcId = i;
         }
     }
 
+    return pcId;
 }
 
 // Describes the room, its properties and the creatures in the current room
@@ -267,7 +320,7 @@ void look() {
 
     switch(currentRoom->state){
         case 0:
-            printf("dirty, ");
+            printf("clean, ");
             break;
         case 1:
             printf("half-dirty, ");
@@ -320,13 +373,133 @@ void look() {
     }
 }
 
-// Cleans the specified room.  If roomToClean is set to -1,
-// clean the current room.
-//TODO: Implement creature reactions
-void clean(int roomId){
-    struct Room* roomToCleanPointer = currentRoom;
+// Cleans the current room.  If creatureId
+// is not -1, have the specified creature clean.
+// TODO: Implement creature reactions
+void clean(int creatureId){
+    int roomCapacity = 10;
 
-    if(roomId != -1){
+    if(currentRoom->state == 0) {
+        printf("Room already clean - nothing happened.\n");
+    } else {
+        // Humans grumble and respect moves down one for each human
+        // Animals lick face and respect moves up one for each animal
+        // TODO: If the room is clean, humans should leave
+
+        currentRoom->state -= 1;
+        if(currentRoom->state == 1){
+            printf("Room is now half-dirty.\n");
+        } else {
+            printf("Room is now clean.\n");
+        }
+
+        for(int i = 0; i<roomCapacity; i++) {
+            if(currentRoom->creatures[i] != NULL) {
+                if(currentRoom->creatures[i]->creatureType == 1) {
+                    respect += 1;
+                    printf("Animal with ID #%i licks your face.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                } else if(currentRoom->creatures[i]->creatureType == 2) {
+                    respect -= 1;
+                    printf("Human with ID #%i grumbles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                }
+            }
+        }
 
     }
+}
+
+// Dirties the current room.  If creatureId
+// is not -1, have the specified creature clean.
+// TODO: Implement creature reactions
+void dirty(int creatureId) {
+    int roomCapacity = 10;
+
+    if(currentRoom->state == 2) {
+        printf("Room already dirty - nothing happened.\n");
+    } else {
+
+        currentRoom->state += 1;
+        if(currentRoom->state == 1) {
+            printf("Room is now half-dirty.\n");
+        } else {
+            printf("Room is now dirty.\n");
+        }
+
+        // Humans smile and respect moves up one for each human
+        // Animals growl and respect moves down one for each animal
+        // TODO: If the room is dirty, animals should leave
+        for(int i = 0; i<roomCapacity; i++) {
+            if(currentRoom->creatures[i] != NULL) {
+                if(currentRoom->creatures[i]->creatureType == 1) {
+                    respect -= 1;
+                    printf("Animal with ID #%i growls.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                } else if(currentRoom->creatures[i]->creatureType == 2) {
+                    respect += 1;
+                    printf("Human with ID #%i smiles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                }
+            }
+        }
+    }
+}
+
+// Move the PC into the specified room
+void move(int roomId, int creatureId) {
+    int roomCapacity = 10;
+    struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
+
+    if(roomId == currentRoom->id){
+        if(creaturePointer->creatureType == 0){
+            printf("Turns out that door was a portal!  You pop back into room #%i.\n", currentRoom->id);
+            return;
+        } else {
+            printf("Turns out that door was a portal!  Creature #%i pops back into room #%i.\n", creatureId, currentRoom->id);
+            return;
+        }
+    }
+
+    // Grab pointers for the room to move into and the creature being moved
+    //TODO: Make sure the room exists!
+    struct Room* newRoomPointer = getRoomPointerFromId(roomId);
+
+    bool foundSpace = false;
+
+    // Make sure the new room has enough space to stick the creature in
+    for(int i=0; i<roomCapacity; i++) {
+        if(newRoomPointer->creatures[i] == NULL) {
+            newRoomPointer->creatures[i] = creaturePointer;
+            foundSpace = true;
+            break;
+        }
+    }
+
+    // If the room has no space, let the user know and return
+    if(!foundSpace) {
+        printf("Room #%i is at full capacity - cannot move creature #%i into there.\n", roomId, creatureId);
+        return;
+    }
+
+    bool foundInOldSpace = false;
+    // Clear out the creature's pointer from the old room
+    for(int i=0; i<roomCapacity; i++) {
+        if(currentRoom->creatures[i] == creaturePointer) {
+            currentRoom->creatures[i] = NULL;
+            foundInOldSpace = true;
+            break;
+        }
+    }
+
+    //Something pretty bad happened!  Let the user know
+    if(!foundInOldSpace) {
+        printf("Something went wrong - creature with ID %i was not found in the current room with ID %i.\n", creatureId, roomId);
+        return;
+    }
+
+    //If the creature was the PC, update the currentRoom
+    if(creaturePointer->creatureType == 0) {
+        currentRoom = newRoomPointer;
+    }
+
+    printf("Creature #%i moved to room #%i\n", creatureId, roomId);
+
+    return;
 }
