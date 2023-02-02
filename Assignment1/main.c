@@ -50,8 +50,7 @@ int initializeCreatures(int);
 
 // Actions
 void look(void);
-void clean(int);
-void dirty(int);
+void alterRoomState(int, bool);
 void move(int, int);
 
 // Helper functions
@@ -175,9 +174,9 @@ bool commandHandler(int max_size, char *command, int pcId) {
     } else if(strcmp(command, "look") == 0) {
         look();
     } else if(strcmp(command, "clean") == 0) {
-        clean(-1);
+        alterRoomState(pcId, true);
     } else if(strcmp(command, "dirty") == 0) {
-        dirty(-1);
+        alterRoomState(pcId, false);
     } else if(strcmp(command, "north") == 0){
         if(currentRoom->northRoomId != -1){
             move(currentRoom->northRoomId, pcId);
@@ -202,8 +201,36 @@ bool commandHandler(int max_size, char *command, int pcId) {
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the west, so here you remain.\n");
         }
+    } else if(strcmp(command, "help") == 0) {
+        printf("*** AVAILABLE ACTIONS ***\n");
+        printf("help    - What you did just now\n");
+        printf("look    - Get information about the current room and what creatures are in it\n");
+        printf("north   - Try to send the PC north\n");
+        printf("south   - Try to send the PC south\n");
+        printf("east    - Try to send the PC east\n");
+        printf("west    - Try to send the PC west\n");
+        printf("clean   - Try to clean the current room\n");
+        printf("dirty   - Try to dirty the current room\n");
+        printf("exit    - Quit the game\n");
+
     } else {
-        printf("Invalid command.\n");
+        // This block handles making creatures do stuff
+
+        // Here we might get some cases where we have to parse it
+        // Referenced: https://stackoverflow.com/questions/46821605/how-to-seperate-user-input-word-delimiter-as-space-using-strtok
+        char* creatureId = strtok(command, ":");
+        char* action = strtok(NULL, " ");
+        //printf("Action: %s\n", action);
+        //printf("Creature ID: %s\n", creatureId);
+
+        if(strcmp(action, "clean") == 0) {
+            alterRoomState(atoi(creatureId), true);
+        } else if(strcmp(action, "dirty") == 0) {
+            alterRoomState(atoi(creatureId), false);
+        } else {
+            printf("Invalid command. Type \"help\" for a list of commands.\n");
+            return false;
+        }
     }
 
     return false;
@@ -239,7 +266,6 @@ void initializeRooms(int numberOfRooms) {
 
         //Grab the five numbers given in the input.
         //In order, they are: state, north, south, east, west
-        //TODO: Check inputs
         for(int j = 0; j < inputSize; j ++){
             scanf("%i", &inputArray[j]);
         }
@@ -376,31 +402,90 @@ void look() {
 // Cleans the current room.  If creatureId
 // is not -1, have the specified creature clean.
 // TODO: Implement creature reactions
-void clean(int creatureId){
+void alterRoomState(int creatureId, bool isClean){
     int roomCapacity = 10;
 
-    if(currentRoom->state == 0) {
+
+    struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
+
+    if(creaturePointer->roomId != currentRoom->id) {
+        printf("Creature with ID #%i is not in the current room!  No cleaning can take place here.\n", creatureId);
+        return;
+    }
+
+
+    if(currentRoom->state == 0 && isClean) {
         printf("Room already clean - nothing happened.\n");
+    } else if(currentRoom->state == 2 && !isClean) {
+        printf("Room already dirty - nothing happened.\n");
     } else {
-        // Humans grumble and respect moves down one for each human
-        // Animals lick face and respect moves up one for each animal
         // TODO: If the room is clean, humans should leave
 
-        currentRoom->state -= 1;
-        if(currentRoom->state == 1){
-            printf("Room is now half-dirty.\n");
+        // Making a creature do something
+        if(creaturePointer->creatureType != 0) {
+            if(creaturePointer->creatureType == 2){
+                if(isClean) {
+                    respect -= 3;
+                    printf("Human #%i grumbles a lot.  Respect is now %i.\n", creaturePointer->id, respect);
+                } else {
+                    respect += 3;
+                    printf("Human #%i smiles a lot.  Respect is now %i.\n", creaturePointer->id, respect);
+                }
+            } else {
+                if(isClean) {
+                    respect += 3;
+                    printf("Animal #%i licks your face a lot.  Respect is now %i.\n", creaturePointer->id, respect);
+                } else {
+                    respect -= 3;
+                    printf("Animal #%i growls a lot.  Respect is now %i.\n", creaturePointer->id, respect);
+                }
+            }
+        }
+
+        // Update room state accordingly
+        if(isClean) {
+            currentRoom->state -= 1;
         } else {
+            currentRoom->state += 1;
+        }
+
+        if(currentRoom->state == 2) {
+            printf("Room is now dirty.\n");
+        } else if(currentRoom->state == 1){
+            printf("Room is now half-dirty.\n");
+        } else if(currentRoom->state == 0) {
             printf("Room is now clean.\n");
         }
 
+        // Loop through the current room's creatures, have them react accordingly
         for(int i = 0; i<roomCapacity; i++) {
             if(currentRoom->creatures[i] != NULL) {
-                if(currentRoom->creatures[i]->creatureType == 1) {
-                    respect += 1;
-                    printf("Animal with ID #%i licks your face.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                } else if(currentRoom->creatures[i]->creatureType == 2) {
-                    respect -= 1;
-                    printf("Human with ID #%i grumbles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                if(currentRoom->creatures[i] != creaturePointer) {
+
+                    // If we specified a creature to clean, their action's been taken care of
+                    if(currentRoom->creatures[i]->creatureType == 1) {
+
+                        if(isClean) {
+                            // Animals like clean rooms - they react positively
+                            respect += 1;
+                            printf("Animal with ID #%i licks your face.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                        } else {
+                            // Animals don't like dirty rooms - they react negatively
+                            respect -= 1;
+                            printf("Animal with ID #%i growls.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                        }
+
+                    } else if(currentRoom->creatures[i]->creatureType == 2) {
+                        if(isClean) {
+                            // Humans don't like clean rooms - they react negatively
+                            respect -= 1;
+                            printf("Human with ID #%i grumbles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                        } else {
+                            // Humans like dirty rooms - they react positively
+                            respect += 1;
+                            printf("Human with ID #%i smiles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                        }
+                    }
                 }
             }
         }
@@ -408,41 +493,7 @@ void clean(int creatureId){
     }
 }
 
-// Dirties the current room.  If creatureId
-// is not -1, have the specified creature clean.
-// TODO: Implement creature reactions
-void dirty(int creatureId) {
-    int roomCapacity = 10;
-
-    if(currentRoom->state == 2) {
-        printf("Room already dirty - nothing happened.\n");
-    } else {
-
-        currentRoom->state += 1;
-        if(currentRoom->state == 1) {
-            printf("Room is now half-dirty.\n");
-        } else {
-            printf("Room is now dirty.\n");
-        }
-
-        // Humans smile and respect moves up one for each human
-        // Animals growl and respect moves down one for each animal
-        // TODO: If the room is dirty, animals should leave
-        for(int i = 0; i<roomCapacity; i++) {
-            if(currentRoom->creatures[i] != NULL) {
-                if(currentRoom->creatures[i]->creatureType == 1) {
-                    respect -= 1;
-                    printf("Animal with ID #%i growls.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                } else if(currentRoom->creatures[i]->creatureType == 2) {
-                    respect += 1;
-                    printf("Human with ID #%i smiles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                }
-            }
-        }
-    }
-}
-
-// Move the PC into the specified room
+// Move the creature into the specified room
 void move(int roomId, int creatureId) {
     int roomCapacity = 10;
     struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
