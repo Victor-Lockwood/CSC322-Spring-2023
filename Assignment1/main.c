@@ -51,7 +51,7 @@ int initializeCreatures(int);
 // Actions
 void look(void);
 void alterRoomState(int, bool);
-void move(int, int);
+int move(int, int, bool);
 
 // Helper functions
 struct Room* getRoomPointerFromId(int);
@@ -179,25 +179,25 @@ bool commandHandler(int max_size, char *command, int pcId) {
         alterRoomState(pcId, false);
     } else if(strcmp(command, "north") == 0){
         if(currentRoom->northRoomId != -1){
-            move(currentRoom->northRoomId, pcId);
+            move(currentRoom->northRoomId, pcId, false);
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the north, so here you remain.\n");
         }
     } else if(strcmp(command, "south") == 0) {
         if(currentRoom->southRoomId != -1){
-            move(currentRoom->southRoomId, pcId);
+            move(currentRoom->southRoomId, pcId, false);
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the south, so here you remain.\n");
         }
     } else if(strcmp(command, "east") == 0){
         if(currentRoom->eastRoomId != -1){
-            move(currentRoom->eastRoomId, pcId);
+            move(currentRoom->eastRoomId, pcId, false);
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the east, so here you remain.\n");
         }
     } else if(strcmp(command, "west") == 0) {
         if(currentRoom->westRoomId != -1){
-            move(currentRoom->westRoomId, pcId);
+            move(currentRoom->westRoomId, pcId, false);
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the west, so here you remain.\n");
         }
@@ -223,10 +223,41 @@ bool commandHandler(int max_size, char *command, int pcId) {
         //printf("Action: %s\n", action);
         //printf("Creature ID: %s\n", creatureId);
 
+        // MAKING CREATURES CLEAN AND DIRTY THE ROOM
         if(strcmp(action, "clean") == 0) {
             alterRoomState(atoi(creatureId), true);
         } else if(strcmp(action, "dirty") == 0) {
             alterRoomState(atoi(creatureId), false);
+
+        // MOVING CREATURES
+        } else if(strcmp(action, "north") == 0) {
+            if(currentRoom->northRoomId != -1){
+                move(currentRoom->northRoomId, atoi(creatureId), false);
+            } else {
+                printf("Creature #%s gazes into the void.  The void gazes back.  There is no room to the north, so here creature #%s remains.\n",
+                       creatureId, creatureId);
+            }
+        } else if(strcmp(action, "south") == 0) {
+            if(currentRoom->southRoomId != -1){
+                move(currentRoom->southRoomId, atoi(creatureId), false);
+            } else {
+                printf("Creature #%s gazes into the void.  The void gazes back.  There is no room to the south, so here creature #%s remains.\n",
+                       creatureId, creatureId);
+            }
+        } else if(strcmp(action, "east") == 0) {
+            if(currentRoom->eastRoomId != -1){
+                move(currentRoom->eastRoomId, atoi(creatureId), false);
+            } else {
+                printf("Creature #%s gazes into the void.  The void gazes back.  There is no room to the east, so here creature #%s remains.\n",
+                       creatureId, creatureId);
+            }
+        } else if(strcmp(action, "west") == 0) {
+            if(currentRoom->westRoomId != -1){
+                move(currentRoom->westRoomId, atoi(creatureId), false);
+            } else {
+                printf("Creature #%s gazes into the void.  The void gazes back.  There is no room to the west, so here creature #%s remains.\n",
+                       creatureId, creatureId);
+            }
         } else {
             printf("Invalid command. Type \"help\" for a list of commands.\n");
             return false;
@@ -400,7 +431,7 @@ void look() {
 }
 
 // Cleans the current room.  If creatureId
-// is not -1, have the specified creature clean.
+// is not that of the PC, have the specified creature clean.
 // TODO: Implement creature reactions
 void alterRoomState(int creatureId, bool isClean){
     int roomCapacity = 10;
@@ -494,17 +525,21 @@ void alterRoomState(int creatureId, bool isClean){
 }
 
 // Move the creature into the specified room
-void move(int roomId, int creatureId) {
+// Return -1 if the creature cannot go into the room, 0 if
+// the creature moved into the same room, and 1 if the creature was able to move successfully
+// isLeave marks whether this is a creature trying to leave a room due to bad conditions.  Set to false
+// when the PC is moving or trying to move another creature
+int move(int roomId, int creatureId, bool isLeave) {
     int roomCapacity = 10;
     struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
 
     if(roomId == currentRoom->id){
         if(creaturePointer->creatureType == 0){
             printf("Turns out that door was a portal!  You pop back into room #%i.\n", currentRoom->id);
-            return;
+            return 0;
         } else {
             printf("Turns out that door was a portal!  Creature #%i pops back into room #%i.\n", creatureId, currentRoom->id);
-            return;
+            return 0;
         }
     }
 
@@ -525,8 +560,11 @@ void move(int roomId, int creatureId) {
 
     // If the room has no space, let the user know and return
     if(!foundSpace) {
-        printf("Room #%i is at full capacity - cannot move creature #%i into there.\n", roomId, creatureId);
-        return;
+        if(!isLeave) {
+            // Not interested in this print out for auto actions
+            printf("Room #%i is at full capacity - cannot move creature #%i into there.\n", roomId, creatureId);
+        }
+        return -1;
     }
 
     bool foundInOldSpace = false;
@@ -542,7 +580,7 @@ void move(int roomId, int creatureId) {
     //Something pretty bad happened!  Let the user know
     if(!foundInOldSpace) {
         printf("Something went wrong - creature with ID %i was not found in the current room with ID %i.\n", creatureId, roomId);
-        return;
+        return -1;
     }
 
     //If the creature was the PC, update the currentRoom
@@ -552,5 +590,5 @@ void move(int roomId, int creatureId) {
 
     printf("Creature #%i moved to room #%i\n", creatureId, roomId);
 
-    return;
+    return 1;
 }
