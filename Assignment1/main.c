@@ -14,6 +14,7 @@ struct Creature {
 
     //ID of the room the creature is currently in
     int roomId;
+
 };
 
 struct Room {
@@ -50,7 +51,7 @@ int initializeCreatures(int);
 
 // Actions
 void look(void);
-void alterRoomState(int, bool);
+void alterRoomState(int, bool, int);
 int move(int, int, bool, int);
 
 // Helper functions
@@ -58,6 +59,7 @@ struct Room* getRoomPointerFromId(int);
 struct Creature* getCreaturePointerFromId(int);
 
 bool commandHandler(int, char *command, int, int, int);
+void reactUnfit(int);
 
 // *** GLOBALS ***
 
@@ -122,14 +124,29 @@ int main() {
     //We get the player's id back
     pcId = initializeCreatures(numberOfCreatures);
 
-    printf("Current room: %i\n", currentRoom->id);
-
+    if(pcId > -1) {
+        printf("Current room ID is %i\n", currentRoom->id);
+    }
     //Here we gooooo!!!
     bool isUserExit = false;
     int max_size = 256;
     char *command = malloc(max_size);
 
     getchar();
+
+    if(numberOfCreatures == 1) {
+        if(pcId == -1) {
+            printf("Dang, you don't have a player character!\n");
+            printf("That's a little sad.\n");
+        } else {
+            printf("Looks like you're the only one here.\n");
+        }
+        printf("There is no way to win.\n");
+        printf("There is no way to lose.\n");
+        printf("Enjoy your stay in purgatory!  Grab a postcard while you're here.\n");
+        printf("Oh wait!  You can't.\n\n");
+        printf("Anyway, just type 'exit' without quotes and hit enter when you eventually get bored.\n");
+    }
     while(respect > 0 && respect < 80 && !isUserExit) {
         // commandHandler takes care of user input - it's going to get long,
         // so I'd rather it get long down there rather than up here
@@ -164,19 +181,48 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
     if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n'))
         command[strlen (command) - 1] = '\0';
 
-    //Big ol' if-else-if chunk to handle inputs
+    if(strlen(command) == 0) {
+        printf("Please enter a command.\n");
+        return false;
+    }
+
     if(strcmp(command, "exit") == 0) {
         //Leave the loop, self-explanatory
         return true;
-    } else if(strcmp(command, "get ye flask") == 0) {
+    } else if(strcmp(command, "help") == 0) {
+        printf("*** AVAILABLE ACTIONS ***\n");
+        printf("help        - What you did just now\n");
+        printf("exit        - Quit the game; this and 'help' are the only things you can do without a player\n");
+        printf("look        - Try to get information about the current room and what creatures are in it\n");
+        printf("north       - Try to send the PC north\n");
+        printf("<id>:north  - Try to send the creature with id <id> north\n");
+        printf("south       - Try to send the PC south\n");
+        printf("<id>:south  - Try to send the creature with id <id> south\n");
+        printf("east        - Try to send the PC east\n");
+        printf("<id>:east   - Try to send the creature with id <id> east\n");
+        printf("west        - Try to send the PC west\n");
+        printf("<id>:west   - Try to send the creature with id <id> west\n");
+        printf("clean       - Try to clean the current room\n");
+        printf("<id>:clean  - Try to have creature with id <id> clean the current room\n");
+        printf("dirty       - Try to dirty the current room\n");
+        printf("<id>:dirty  - Try to have creature with id <id> dirty the current room\n");
+        return false;
+    } else if(pcId == -1) {
+        printf("You need a player character to try and do anything other than 'help' or 'exit!\n");
+        printf("Think about that next time you play.\n");
+        return false;
+    }
+
+    //Big ol' if-else-if chunk to handle inputs
+    if(strcmp(command, "get ye flask") == 0) {
         // Never you mind
         printf("You can't get ye flask!\n");
     } else if(strcmp(command, "look") == 0) {
         look();
     } else if(strcmp(command, "clean") == 0) {
-        alterRoomState(pcId, true);
+        alterRoomState(pcId, true, numberOfCreatures);
     } else if(strcmp(command, "dirty") == 0) {
-        alterRoomState(pcId, false);
+        alterRoomState(pcId, false, numberOfCreatures);
     } else if(strcmp(command, "north") == 0){
         if(currentRoom->northRoomId != -1){
             move(currentRoom->northRoomId, pcId, false, numberOfCreatures);
@@ -201,26 +247,12 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
         } else {
             printf("You gaze into the void.  The void gazes back.  There is no room to the west, so here you remain.\n");
         }
-    } else if(strcmp(command, "help") == 0) {
-        printf("*** AVAILABLE ACTIONS ***\n");
-        printf("help        - What you did just now\n");
-        printf("look        - Get information about the current room and what creatures are in it\n");
-        printf("north       - Try to send the PC north\n");
-        printf("<id>:north  - Try to send the creature with id <id> north\n");
-        printf("south       - Try to send the PC south\n");
-        printf("<id>:south  - Try to send the creature with id <id> south\n");
-        printf("east        - Try to send the PC east\n");
-        printf("<id>:east   - Try to send the creature with id <id> east\n");
-        printf("west        - Try to send the PC west\n");
-        printf("<id>:west   - Try to send the creature with id <id> west\n");
-        printf("clean       - Try to clean the current room\n");
-        printf("<id>:clean  - Try to have creature with id <id> clean the current room\n");
-        printf("dirty       - Try to dirty the current room\n");
-        printf("<id>:dirty  - Try to have creature with id <id> dirty the current room\n");
-        printf("exit        - Quit the game\n");
-
     } else {
         // This block handles making creatures do stuff
+        if(numberOfCreatures == 1) {
+            printf("What are you trying to do? You're alone here, buddy!\n");
+            return false;
+        }
 
         // Here we might get some cases where we have to parse it
         // Referenced: https://stackoverflow.com/questions/46821605/how-to-seperate-user-input-word-delimiter-as-space-using-strtok
@@ -231,9 +263,9 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
 
         // MAKING CREATURES CLEAN AND DIRTY THE ROOM
         if(strcmp(action, "clean") == 0) {
-            alterRoomState(atoi(creatureId), true);
+            alterRoomState(atoi(creatureId), true, numberOfCreatures);
         } else if(strcmp(action, "dirty") == 0) {
-            alterRoomState(atoi(creatureId), false);
+            alterRoomState(atoi(creatureId), false, numberOfCreatures);
 
         // MOVING CREATURES
         } else if(strcmp(action, "north") == 0) {
@@ -439,7 +471,7 @@ void look() {
 // Cleans the current room.  If creatureId
 // is not that of the PC, have the specified creature clean.
 // TODO: Implement creature reactions
-void alterRoomState(int creatureId, bool isClean){
+void alterRoomState(int creatureId, bool isClean, int numberOfCreatures){
     int roomCapacity = 10;
 
 
@@ -527,6 +559,55 @@ void alterRoomState(int creatureId, bool isClean){
             }
         }
 
+        //This should only run once - if a creature is prompted to do this after a leave attempt,
+        // it will be half dirty and should stop any other creatures from trying to leave.
+        //TODO: Finish this
+        if(currentRoom->state == 2 || currentRoom->state == 0) {
+            //reactUnfit(numberOfCreatures);
+        }
+
+    }
+}
+
+//TODO: Finish this
+void reactUnfit(int numberOfCreatures) {
+    int r = rand() % 3;
+    int roomId = -1;
+    int roomCapacity = 10;
+
+    struct Room *nextRoomPointer = NULL;
+
+    switch (r) {
+        case 0:
+            roomId = currentRoom->northRoomId;
+            break;
+        case 1:
+            roomId = currentRoom->southRoomId;
+            break;
+        case 2:
+            roomId = currentRoom->eastRoomId;
+            break;
+        case 3:
+            roomId = currentRoom->westRoomId;
+    }
+
+    if(roomId != -1 && roomId != currentRoom->id) {
+        nextRoomPointer = getRoomPointerFromId(roomId);
+    }
+
+    for(int i = 0; i < roomCapacity; i++) {
+        if(currentRoom->creatures[i] != NULL) {
+            struct Creature currentCreature = creatures[i];
+
+            //Try to move an animal into another room
+            if(currentCreature.creatureType == 1 && currentRoom->state == 2) {
+
+                //If the next room exists and is not dirty, try to stick them there
+                if(currentRoom != NULL && nextRoomPointer->state != 2) {
+                    move(roomId, currentCreature.id, true, numberOfCreatures);
+                }
+            }
+        }
     }
 }
 
@@ -559,7 +640,35 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     //TODO: Make sure the room exists!
     struct Room* newRoomPointer = getRoomPointerFromId(roomId);
 
+    if(newRoomPointer->state == 0 && creaturePointer->creatureType==2) {
+        if(!isLeave) {
+            printf("Room #%i is too clean for creature #%i!\n", roomId, creatureId);
+        }
+        return -1;
+    } else if(newRoomPointer->state == 2 && creaturePointer->creatureType == 1){
+        if(!isLeave) {
+            printf("Room #%i is too dirty for creature #%i!\n", roomId, creatureId);
+        }
+        return -1;
+    }
+
     bool foundSpace = false;
+    int oldRoomIndex = -1;
+
+    bool foundInOldSpace = false;
+    // Clear out the creature's pointer from the old room
+    for(int i=0; i<roomCapacity; i++) {
+        if(currentRoom->creatures[i] == creaturePointer) {
+            oldRoomIndex = i;
+            foundInOldSpace = true;
+            break;
+        }
+    }
+
+    if(!foundInOldSpace) {
+        printf("Creature with ID %i was not found in the current room with ID %i.\n", creatureId, roomId);
+        return -1;
+    }
 
     // Make sure the new room has enough space to stick the creature in
     for(int i=0; i<roomCapacity; i++) {
@@ -579,21 +688,8 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
         return -1;
     }
 
-    bool foundInOldSpace = false;
-    // Clear out the creature's pointer from the old room
-    for(int i=0; i<roomCapacity; i++) {
-        if(currentRoom->creatures[i] == creaturePointer) {
-            currentRoom->creatures[i] = NULL;
-            foundInOldSpace = true;
-            break;
-        }
-    }
+    currentRoom->creatures[oldRoomIndex] = NULL;
 
-    //Something pretty bad happened!  Let the user know
-    if(!foundInOldSpace) {
-        printf("Something went wrong - creature with ID %i was not found in the current room with ID %i.\n", creatureId, roomId);
-        return -1;
-    }
 
     //If the creature was the PC, update the currentRoom
     if(creaturePointer->creatureType == 0) {
@@ -604,3 +700,4 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
 
     return 1;
 }
+
