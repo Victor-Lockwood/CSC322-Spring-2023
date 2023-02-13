@@ -60,6 +60,7 @@ struct Creature* getCreaturePointerFromId(int);
 
 bool commandHandler(int, char *command, int, int, int);
 int reactUnfit(int);
+void reactCreatureDrill();
 
 // *** GLOBALS ***
 
@@ -477,8 +478,9 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
 
     struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
 
+
     if(creaturePointer->roomId != currentRoom->id) {
-        printf("Creature with ID #%i is not in the current room!  No cleaning can take place here.\n", creatureId);
+        printf("Creature with ID #%i is not in the current room!  No cleaning or dirtying can take place here.\n", creatureId);
         return;
     }
 
@@ -564,8 +566,7 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
         // it will be half dirty and should stop any other creatures from trying to leave.
         //TODO: Finish this
         if(currentRoom->state == 2 || currentRoom->state == 0) {
-            int responseCode = reactUnfit(numberOfCreatures);
-
+            reactUnfit(numberOfCreatures);
         }
 
     }
@@ -596,11 +597,13 @@ int reactUnfit(int numberOfCreatures) {
 
     //Loop through creatures in the room
     for(int i=0; i<roomCapacity; i++) {
-        if(currentRoom->creatures[i] == NULL) continue;
+        if((currentRoom->creatures[i] == NULL) || (currentRoom->creatures[i]->creatureType == 0)) continue;
         struct Creature* currentCreature = currentRoom->creatures[i];
         if((currentCreature->creatureType == 2 && currentRoom->state == 0) ||
            (currentCreature->creatureType == 1 && currentRoom->state == 2))   {
             printf("Current room is unsuitable for creature with ID #%i!\n", currentCreature->id);
+            bool inserted = false;
+
             //Try to go through the north room first
             if(currentRoom->northRoomId != -1 && currentRoom->northRoomId != currentRoom->id) {
                 nextRoomPointer = getRoomPointerFromId(currentRoom->northRoomId);
@@ -619,6 +622,8 @@ int reactUnfit(int numberOfCreatures) {
                     alterRoomState(currentCreature->id, true, numberOfCreatures, true);
                     return 0;
                 }
+
+                int moved = move(nextRoomPointer->id, currentCreature->id, true, numberOfCreatures);
             }
         }
     }
@@ -729,6 +734,8 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     if(creaturePointer->creatureType == 0) {
         currentRoom = newRoomPointer;
     }
+
+    creaturePointer->roomId = newRoomPointer->id;
 
     printf("Creature #%i moved to room #%i\n", creatureId, roomId);
 
