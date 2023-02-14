@@ -51,7 +51,7 @@ int initializeCreatures(int);
 
 // Actions
 void look(void);
-void alterRoomState(int, bool, int, bool);
+void alterRoomState(int, bool, int, bool, bool);
 int move(int, int, bool, int);
 
 // Helper functions
@@ -60,7 +60,6 @@ struct Creature* getCreaturePointerFromId(int);
 
 bool commandHandler(int, char *command, int, int, int);
 int reactUnfit(int);
-int tryRoomMove(struct Creature*, struct Room*, int);
 void reactCreatureDrill();
 
 // *** GLOBALS ***
@@ -222,9 +221,9 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
     } else if(strcmp(command, "look") == 0) {
         look();
     } else if(strcmp(command, "clean") == 0) {
-        alterRoomState(pcId, true, numberOfCreatures, false);
+        alterRoomState(pcId, true, numberOfCreatures, false, false);
     } else if(strcmp(command, "dirty") == 0) {
-        alterRoomState(pcId, false, numberOfCreatures, false);
+        alterRoomState(pcId, false, numberOfCreatures, false, false);
     } else if(strcmp(command, "north") == 0){
         if(currentRoom->northRoomId != -1){
             move(currentRoom->northRoomId, pcId, false, numberOfCreatures);
@@ -265,9 +264,9 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
 
         // MAKING CREATURES CLEAN AND DIRTY THE ROOM
         if(strcmp(action, "clean") == 0) {
-            alterRoomState(atoi(creatureId), true, numberOfCreatures, false);
+            alterRoomState(atoi(creatureId), true, numberOfCreatures, false, false);
         } else if(strcmp(action, "dirty") == 0) {
-            alterRoomState(atoi(creatureId), false, numberOfCreatures, false);
+            alterRoomState(atoi(creatureId), false, numberOfCreatures, false, false);
 
         // MOVING CREATURES
         } else if(strcmp(action, "north") == 0) {
@@ -472,30 +471,26 @@ void look() {
 
 // Cleans the current room.  If creatureId
 // is not that of the PC, have the specified creature clean.
-// TODO: Implement creature reactions
-void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool isAutoAction){
+void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool isAutoAction, bool isMove){
     int roomCapacity = 10;
 
 
     struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
 
-
+    struct Room* roomToCleanPointer = currentRoom;
     if(creaturePointer->roomId != currentRoom->id) {
-        printf("Creature with ID #%i is not in the current room!  No cleaning or dirtying can take place here.\n", creatureId);
-        return;
+        roomToCleanPointer = getRoomPointerFromId(creaturePointer->roomId);
     }
 
 
-    if(currentRoom->state == 0 && isClean) {
+    if(roomToCleanPointer->state == 0 && isClean) {
         printf("Room already clean - nothing happened.\n");
-    } else if(currentRoom->state == 2 && !isClean) {
+    } else if(roomToCleanPointer->state == 2 && !isClean) {
         printf("Room already dirty - nothing happened.\n");
     } else {
-        // TODO: If the room is clean, humans should leave
-
         // Making a creature do something
         //If it's an autoAction though, do not do this
-        if(creaturePointer->creatureType != 0 && !isAutoAction) {
+        if(creaturePointer->creatureType != 0 && !isAutoAction && !isMove) {
             if(creaturePointer->creatureType == 2){
                 if(isClean) {
                     respect -= 3;
@@ -517,57 +512,61 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
 
         // Update room state accordingly
         if(isClean) {
-            currentRoom->state -= 1;
+            roomToCleanPointer->state -= 1;
         } else {
-            currentRoom->state += 1;
+            roomToCleanPointer->state += 1;
         }
 
-        if(currentRoom->state == 2) {
-            printf("Room is now dirty.\n");
-        } else if(currentRoom->state == 1){
-            printf("Room is now half-dirty.\n");
-        } else if(currentRoom->state == 0) {
-            printf("Room is now clean.\n");
+        if(!isAutoAction) {
+            if(roomToCleanPointer->state == 2) {
+                printf("Room is now dirty.\n");
+            } else if(roomToCleanPointer->state == 1){
+                printf("Room is now half-dirty.\n");
+            } else if(roomToCleanPointer->state == 0) {
+                printf("Room is now clean.\n");
+            }
         }
 
         // Loop through the current room's creatures, have them react accordingly
-        for(int i = 0; i<roomCapacity; i++) {
-            if(currentRoom->creatures[i] != NULL) {
-                if(currentRoom->creatures[i] != creaturePointer) {
+        // Only react if it's the current room, though
+        if(roomToCleanPointer == currentRoom) {
+            for(int i = 0; i<roomCapacity; i++) {
+                if(roomToCleanPointer->creatures[i] != NULL) {
+                    if(roomToCleanPointer->creatures[i] != creaturePointer) {
 
-                    // If we specified a creature to clean, their action's been taken care of
-                    if(currentRoom->creatures[i]->creatureType == 1) {
+                        // If we specified a creature to clean, their action's been taken care of
+                        if(roomToCleanPointer->creatures[i]->creatureType == 1) {
 
-                        if(isClean) {
-                            // Animals like clean rooms - they react positively
-                            respect += 1;
-                            printf("Animal with ID #%i licks your face.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                        } else {
-                            // Animals don't like dirty rooms - they react negatively
-                            respect -= 1;
-                            printf("Animal with ID #%i growls.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                        }
+                            if(isClean) {
+                                // Animals like clean rooms - they react positively
+                                respect += 1;
+                                printf("Animal with ID #%i licks your face.  Respect is now %i.\n", roomToCleanPointer->creatures[i]->id, respect);
+                            } else {
+                                // Animals don't like dirty rooms - they react negatively
+                                respect -= 1;
+                                printf("Animal with ID #%i growls.  Respect is now %i.\n", roomToCleanPointer->creatures[i]->id, respect);
+                            }
 
-                    } else if(currentRoom->creatures[i]->creatureType == 2) {
-                        if(isClean) {
-                            // Humans don't like clean rooms - they react negatively
-                            respect -= 1;
-                            printf("Human with ID #%i grumbles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
-                        } else {
-                            // Humans like dirty rooms - they react positively
-                            respect += 1;
-                            printf("Human with ID #%i smiles.  Respect is now %i.\n", currentRoom->creatures[i]->id, respect);
+                        } else if(roomToCleanPointer->creatures[i]->creatureType == 2) {
+                            if(isClean) {
+                                // Humans don't like clean rooms - they react negatively
+                                respect -= 1;
+                                printf("Human with ID #%i grumbles.  Respect is now %i.\n", roomToCleanPointer->creatures[i]->id, respect);
+                            } else {
+                                // Humans like dirty rooms - they react positively
+                                respect += 1;
+                                printf("Human with ID #%i smiles.  Respect is now %i.\n", roomToCleanPointer->creatures[i]->id, respect);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        //This should only run once - if a creature is prompted to do this after a leave attempt,
-        // it will be half dirty and should stop any other creatures from trying to leave.
-        //TODO: Finish this
-        if(currentRoom->state == 2 || currentRoom->state == 0) {
-            reactUnfit(numberOfCreatures);
+            //This should only run once - if a creature is prompted to do this after a leave attempt,
+            // it will be half dirty and should stop any other creatures from trying to leave.
+            if(currentRoom->state == 2 || currentRoom->state == 0) {
+                reactUnfit(numberOfCreatures);
+            }
         }
 
     }
@@ -606,7 +605,7 @@ int reactUnfit(int numberOfCreatures) {
             int roomIdArray[4];
 
             //I sacrificed being able to do this easily with an array at start for the sake of readability in the Room struct
-            //It is here that I pay the price if I want a random room order
+            //It is here that I pay the price for a random room order
             switch(r) {
                 case 0:
                     roomIdArray[0] = currentRoom->northRoomId;
@@ -638,7 +637,7 @@ int reactUnfit(int numberOfCreatures) {
             for(int i = 0; i<4; i++) {
                 if(roomIdArray[i] != -1 && roomIdArray[i] != currentRoom->id) {
                     nextRoomPointer = getRoomPointerFromId(roomIdArray[i]);
-                    int responseCode = tryRoomMove(currentCreature, nextRoomPointer, numberOfCreatures);
+                    int responseCode =  move(nextRoomPointer->id, currentCreature->id, true, numberOfCreatures);
 
                     if(responseCode == 0 || responseCode == 1) return 0;
                     if(responseCode == -1) numberOfFailures++;
@@ -665,26 +664,6 @@ int reactUnfit(int numberOfCreatures) {
     return 1;
 }
 
-int tryRoomMove(struct Creature* currentCreature, struct Room* nextRoomPointer, int numberOfCreatures) {
-
-    //If the next room is clean and we're dealing with a human, have the human dirty the current room - we can exit the function now
-    //as the room state will shift to half-dirty
-    if(nextRoomPointer->state == 0 && currentCreature->creatureType == 2) {
-        printf("Next room is also too clean for creature with ID #%i.  Opting to dirty this room instead.\n", currentCreature->id);
-        alterRoomState(currentCreature->id, false, numberOfCreatures, true);
-        return 0;
-    }
-
-    //Same deal but have the animal clean the room
-    if(nextRoomPointer->state == 2 && currentCreature->creatureType == 1) {
-        printf("Next room is also too dirty for creature with ID #%i.  Opting to clean this room instead.\n", currentCreature->id);
-        alterRoomState(currentCreature->id, true, numberOfCreatures, true);
-        return 0;
-    }
-
-    int moved = move(nextRoomPointer->id, currentCreature->id, true, numberOfCreatures);
-    return moved;
-}
 
 void reactCreatureDrill() {
     int roomCapacity = 10;
@@ -731,20 +710,7 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     }
 
     // Grab pointers for the room to move into and the creature being moved
-    //TODO: Make sure the room exists!
     struct Room* newRoomPointer = getRoomPointerFromId(roomId);
-
-    if(newRoomPointer->state == 0 && creaturePointer->creatureType==2) {
-        if(!isLeave) {
-            printf("Room #%i is too clean for creature #%i!\n", roomId, creatureId);
-        }
-        return -1;
-    } else if(newRoomPointer->state == 2 && creaturePointer->creatureType == 1){
-        if(!isLeave) {
-            printf("Room #%i is too dirty for creature #%i!\n", roomId, creatureId);
-        }
-        return -1;
-    }
 
     bool foundSpace = false;
     int oldRoomIndex = -1;
@@ -778,6 +744,13 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
         if(!isLeave) {
             // Not interested in this print out for auto actions
             printf("Room #%i is at full capacity - cannot move creature #%i into there.\n", roomId, creatureId);
+            if(creaturePointer->creatureType == 1) {
+                printf("Creature with ID #%i growls.\n", creatureId);
+                respect--;
+            } else if(creaturePointer->creatureType == 2) {
+                printf("Creature with ID #%i grumbles.\n", creatureId);
+                respect--;
+            }
         }
         return -1;
     }
@@ -791,6 +764,16 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     }
 
     creaturePointer->roomId = newRoomPointer->id;
+
+    //Adjust the room accordingly
+    if(newRoomPointer->state == 0 && creaturePointer->creatureType==2) {
+        printf("Room #%i is too clean for creature #%i!  Room will now be dirtied.\n", roomId, creatureId);
+        alterRoomState(creatureId, false, numberOfCreatures, isLeave, true);
+    } else if(newRoomPointer->state == 2 && creaturePointer->creatureType == 1){
+        printf("Room #%i is too dirty for creature #%i!  Room will now be cleaned.\n", roomId, creatureId);
+        alterRoomState(creatureId, true, numberOfCreatures, isLeave, true);
+    }
+
 
     printf("Creature #%i moved to room #%i\n", creatureId, roomId);
 
