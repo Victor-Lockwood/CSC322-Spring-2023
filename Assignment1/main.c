@@ -443,7 +443,7 @@ void look() {
         printf("%i to the north, ", currentRoom->northRoomId);
     }
     if(currentRoom->southRoomId != -1){
-        printf("%i to the south, ", currentRoom->northRoomId);
+        printf("%i to the south, ", currentRoom->southRoomId);
     }
     if(currentRoom->eastRoomId != -1){
         printf("%i to the east, ", currentRoom->eastRoomId);
@@ -573,15 +573,12 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
     }
 }
 
-//TODO: Finish this
+//If the room becomes unfit for a creature type - either dirty or clean - handle it here
 int reactUnfit(int numberOfCreatures) {
-    //TODO: Remove; debug stuff
-    //printf("reactUnfit reached\n");
-    //return -1;
+    int r = rand() % 3;
 
     int roomCapacity = 10;
     bool allRoomsFull = false;
-    bool foundRoom = false;
 
 
     //If there are no available rooms to move to, we need to know so we can have the creature drill out
@@ -606,15 +603,61 @@ int reactUnfit(int numberOfCreatures) {
 
             // 4 failures means it's time to drill
             int numberOfFailures = 0;
+            int roomIdArray[4];
 
-            //Try to go through the north room first
-            if(currentRoom->northRoomId == -1 || currentRoom->northRoomId == currentRoom->id) numberOfFailures++;
-            if(currentRoom->northRoomId != -1 && currentRoom->northRoomId != currentRoom->id) {
-                nextRoomPointer = getRoomPointerFromId(currentRoom->northRoomId);
-                int responseCode = tryRoomMove(currentCreature, nextRoomPointer, numberOfCreatures);
+            //I sacrificed being able to do this easily with an array at start for the sake of readability in the Room struct
+            //It is here that I pay the price if I want a random room order
+            switch(r) {
+                case 0:
+                    roomIdArray[0] = currentRoom->northRoomId;
+                    roomIdArray[1] = currentRoom->southRoomId;
+                    roomIdArray[2] = currentRoom->eastRoomId;
+                    roomIdArray[3] = currentRoom->westRoomId;
+                    break;
+                case 1:
+                    roomIdArray[3] = currentRoom->northRoomId;
+                    roomIdArray[0] = currentRoom->southRoomId;
+                    roomIdArray[1] = currentRoom->eastRoomId;
+                    roomIdArray[2] = currentRoom->westRoomId;
+                    break;
+                case 2:
+                    roomIdArray[2] = currentRoom->northRoomId;
+                    roomIdArray[3] = currentRoom->southRoomId;
+                    roomIdArray[0] = currentRoom->eastRoomId;
+                    roomIdArray[1] = currentRoom->westRoomId;
+                    break;
+                case 3:
+                    roomIdArray[1] = currentRoom->northRoomId;
+                    roomIdArray[2] = currentRoom->southRoomId;
+                    roomIdArray[3] = currentRoom->eastRoomId;
+                    roomIdArray[0] = currentRoom->westRoomId;
+                    break;
+            }
 
-                if(responseCode == 0) return 0;
-                if(responseCode == -1) numberOfFailures++;
+            //Try to go through each room in the array - we can return if we found what we need
+            for(int i = 0; i<4; i++) {
+                if(roomIdArray[i] != -1 && roomIdArray[i] != currentRoom->id) {
+                    nextRoomPointer = getRoomPointerFromId(roomIdArray[i]);
+                    int responseCode = tryRoomMove(currentCreature, nextRoomPointer, numberOfCreatures);
+
+                    if(responseCode == 0 || responseCode == 1) return 0;
+                    if(responseCode == -1) numberOfFailures++;
+                } else {
+                    numberOfFailures++;
+                }
+            }
+
+            if(numberOfFailures == 4 || allRoomsFull) {
+                //Here's where the creature would drill out of the house
+                //We don't return here - any other creatures needing to leave due to room conditions still
+                //need to do so
+                printf("All other rooms are full! Creature with ID #%i drills out of the house due to your negligence!\n", currentCreature->id);
+                currentRoom->creatures[i] = NULL;
+                reactCreatureDrill();
+            } else {
+                printf("Uh oh, you shouldn't have gotten here!  Something went wrong.\n");
+
+                return -1;
             }
         }
     }
