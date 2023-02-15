@@ -55,8 +55,8 @@ void alterRoomState(int, bool, int, bool, bool);
 int move(int, int, bool, int);
 
 // Helper functions
-struct Room* getRoomPointerFromId(int);
-struct Creature* getCreaturePointerFromId(int);
+struct Room *getRoomPointerFromId(int);
+struct Creature *getCreaturePointerFromId(int);
 
 bool commandHandler(int, char *command, int, int, int);
 int reactUnfit(int);
@@ -65,13 +65,13 @@ void reactCreatureDrill();
 // *** GLOBALS ***
 
 //Pointer to the first element in the array of creatures
-struct Creature* creatures;
+struct Creature *creatures;
 
 //Pointer to the first element in the array of rooms
-struct Room* rooms;
+struct Room *rooms;
 
 //Pointer to the room the PC is currently in
-struct Room* currentRoom = NULL;
+struct Room *currentRoom = NULL;
 
 //Main metric of the game
 //If this hits 0 or under, player loses
@@ -130,7 +130,7 @@ int main() {
     }
     //Here we gooooo!!!
     bool isUserExit = false;
-    int max_size = 256;
+    int max_size = 12;
     char *command = malloc(max_size);
 
     getchar();
@@ -192,21 +192,22 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
         return true;
     } else if(strcmp(command, "help") == 0) {
         printf("*** AVAILABLE ACTIONS ***\n");
-        printf("help        - What you did just now\n");
-        printf("exit        - Quit the game; this and 'help' are the only things you can do without a player\n");
-        printf("look        - Try to get information about the current room and what creatures are in it\n");
-        printf("north       - Try to send the PC north\n");
-        printf("<id>:north  - Try to send the creature with id <id> north\n");
-        printf("south       - Try to send the PC south\n");
-        printf("<id>:south  - Try to send the creature with id <id> south\n");
-        printf("east        - Try to send the PC east\n");
-        printf("<id>:east   - Try to send the creature with id <id> east\n");
-        printf("west        - Try to send the PC west\n");
-        printf("<id>:west   - Try to send the creature with id <id> west\n");
-        printf("clean       - Try to clean the current room\n");
-        printf("<id>:clean  - Try to have creature with id <id> clean the current room\n");
-        printf("dirty       - Try to dirty the current room\n");
-        printf("<id>:dirty  - Try to have creature with id <id> dirty the current room\n");
+        printf("help          - What you did just now\n");
+        printf("exit          - Quit the game; this and 'help' are the only things you can do without a player\n");
+        printf("look          - Try to get information about the current room and what creatures are in it\n");
+        printf("north         - Try to send the PC north\n");
+        printf("<id>:north    - Try to send the creature with id <id> north\n");
+        printf("south         - Try to send the PC south\n");
+        printf("<id>:south    - Try to send the creature with id <id> south\n");
+        printf("east          - Try to send the PC east\n");
+        printf("<id>:east     - Try to send the creature with id <id> east\n");
+        printf("west          - Try to send the PC west\n");
+        printf("<id>:west     - Try to send the creature with id <id> west\n");
+        printf("clean         - Try to clean the current room\n");
+        printf("<id>:clean    - Try to have creature with id <id> clean the current room\n");
+        printf("dirty         - Try to dirty the current room\n");
+        printf("<id>:dirty    - Try to have creature with id <id> dirty the current room\n");
+        printf("get ye flask  - Never you mind\n");
         return false;
     } else if(pcId == -1) {
         printf("You need a player character to try and do anything other than 'help' or 'exit!\n");
@@ -308,16 +309,17 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
 
 
 // Given a room's id, return its pointer
-// TODO: Some sort of check to see if the room exists should be in place.  Preferably not here, but putting the note here while I think of it.
-struct Room* getRoomPointerFromId(int roomId) {
-    struct Room* roomPointer = rooms + (sizeof(struct Room) * roomId);
+struct Room *getRoomPointerFromId(int roomId) {
+    //I'm leaving the next line commented out as a reminder of how NOT to do this
+    //struct Room* roomPointer = rooms + (sizeof(struct Room) * roomId);
+    struct Room *roomPointer = rooms + roomId;
     return roomPointer;
 }
 
 // Given a creature's id, return its pointer
-// TODO: Some sort of check to see if the creature exists should be in place.  Preferably not here, but putting the note here while I think of it.
-struct Creature* getCreaturePointerFromId(int creatureId) {
-    struct Creature* activeCreaturePointer = creatures + (sizeof(struct Creature) * creatureId);
+struct Creature *getCreaturePointerFromId(int creatureId) {
+    //struct Creature* activeCreaturePointer = creatures + (sizeof(struct Creature) * creatureId);
+    struct Creature* activeCreaturePointer = creatures + creatureId;
     return activeCreaturePointer;
 }
 
@@ -340,7 +342,7 @@ void initializeRooms(int numberOfRooms) {
             scanf("%i", &inputArray[j]);
         }
 
-        struct Room* activeRoomPointer = getRoomPointerFromId(i);
+        struct Room *activeRoomPointer = getRoomPointerFromId(i);
 
         activeRoomPointer->id = i;
         activeRoomPointer->state = inputArray[0];
@@ -380,14 +382,13 @@ int initializeCreatures(int numberOfCreatures) {
             scanf("%i", &inputArray[j]);
         }
 
-        struct Creature* activeCreaturePointer = getCreaturePointerFromId(i);
-        //struct Creature creature = *activeCreaturePointer;
+        struct Creature *activeCreaturePointer = getCreaturePointerFromId(i);
 
         activeCreaturePointer->id = i;
         activeCreaturePointer->creatureType = inputArray[0];
         activeCreaturePointer->roomId = inputArray[1];
 
-        struct Room* activeRoom = getRoomPointerFromId(activeCreaturePointer->roomId);
+        struct Room *activeRoom = getRoomPointerFromId(activeCreaturePointer->roomId);
 
         //Stick the creature's pointer into the first empty slot
         //of the pointer array of the room it's associated with
@@ -475,9 +476,9 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
     int roomCapacity = 10;
 
 
-    struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
+    struct Creature *creaturePointer = getCreaturePointerFromId(creatureId);
 
-    struct Room* roomToCleanPointer = currentRoom;
+    struct Room *roomToCleanPointer = currentRoom;
     if(creaturePointer->roomId != currentRoom->id) {
         roomToCleanPointer = getRoomPointerFromId(creaturePointer->roomId);
     }
@@ -595,7 +596,7 @@ int reactUnfit(int numberOfCreatures) {
     //Loop through creatures in the room
     for(int i=0; i<roomCapacity; i++) {
         if((currentRoom->creatures[i] == NULL) || (currentRoom->creatures[i]->creatureType == 0)) continue;
-        struct Creature* currentCreature = currentRoom->creatures[i];
+        struct Creature *currentCreature = currentRoom->creatures[i];
         if((currentCreature->creatureType == 2 && currentRoom->state == 0) ||
            (currentCreature->creatureType == 1 && currentRoom->state == 2))   {
             printf("Current room is unsuitable for creature with ID #%i!\n", currentCreature->id);
@@ -697,7 +698,7 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
         return -1;
     }
 
-    struct Creature* creaturePointer = getCreaturePointerFromId(creatureId);
+    struct Creature *creaturePointer = getCreaturePointerFromId(creatureId);
 
     if(roomId == currentRoom->id){
         if(creaturePointer->creatureType == 0){
@@ -710,7 +711,7 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     }
 
     // Grab pointers for the room to move into and the creature being moved
-    struct Room* newRoomPointer = getRoomPointerFromId(roomId);
+    struct Room *newRoomPointer = getRoomPointerFromId(roomId);
 
     bool foundSpace = false;
     int oldRoomIndex = -1;
