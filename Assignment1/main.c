@@ -155,13 +155,13 @@ int main() {
     }
 
     if(isUserExit){
-        printf("Goodbye!");
+        printf("Goodbye!\n");
     } else if(respect <= 0){
-        printf("Everyone dislikes your presence!  You lose.");
+        printf("Everyone dislikes your presence!  You lose.\n");
     } else if(respect >= 80){
         //Could just be an else but if the user leaves the loop otherwise
         //somehow I'd prefer to have nothing happen over undo praise
-        printf("Congrats!  Your presence was appreciated!  You win!");
+        printf("Congrats!  Your presence was appreciated!  You win!\n");
     }
 
     free(rooms);
