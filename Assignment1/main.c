@@ -325,7 +325,7 @@ struct Creature* getCreaturePointerFromId(int creatureId) {
 // Initialize the rooms and set the global pointer to the array of set rooms.
 // The array is dynamically allocated and must be freed when no longer in use.
 void initializeRooms(int numberOfRooms) {
-    rooms = malloc(numberOfRooms * sizeof(struct Room));
+    rooms = malloc((numberOfRooms + 1) * sizeof(struct Room));
 
     for(int i = 0; i < numberOfRooms; i++) {
 
@@ -363,7 +363,7 @@ void initializeRooms(int numberOfRooms) {
 // of the room it's in and set currentRoom to the pointer of the room the PC is in.
 // The array is dynamically allocated and must be freed when no longer in use.
 int initializeCreatures(int numberOfCreatures) {
-    creatures = malloc(numberOfCreatures * sizeof(struct Creature));
+    creatures = malloc((numberOfCreatures + 1) * sizeof(struct Creature));
     int roomCapacity = 10;
     int pcId = -1;
 
