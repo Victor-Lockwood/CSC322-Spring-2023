@@ -319,6 +319,8 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
 
 
 // Given a room's id, return its pointer
+// This function is not necessary - you can really just do rooms[roomId] and get the struct -
+// but here it remains as a reminder
 struct Room *getRoomPointerFromId(int roomId) {
     //I'm leaving the next line commented out as a reminder of how NOT to do this
     //struct Room* roomPointer = rooms + (sizeof(struct Room) * roomId);
@@ -327,6 +329,8 @@ struct Room *getRoomPointerFromId(int roomId) {
 }
 
 // Given a creature's id, return its pointer
+// This function is not necessary - you can really just do creatures[creatureId] and get the struct -
+// but here it remains as a reminder
 struct Creature *getCreaturePointerFromId(int creatureId) {
     //struct Creature* activeCreaturePointer = creatures + (sizeof(struct Creature) * creatureId);
     struct Creature* activeCreaturePointer = creatures + creatureId;
@@ -474,7 +478,7 @@ void look() {
             printf("PC\n");
         } else if(creature->creatureType == 1) {
             printf("animal %i\n", creature->id);
-        } else {All other rooms are full
+        } else {
             printf("human %i\n", creature->id);
         }
     }
