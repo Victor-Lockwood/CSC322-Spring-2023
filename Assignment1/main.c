@@ -474,7 +474,7 @@ void look() {
             printf("PC\n");
         } else if(creature->creatureType == 1) {
             printf("animal %i\n", creature->id);
-        } else {
+        } else {All other rooms are full
             printf("human %i\n", creature->id);
         }
     }
@@ -588,10 +588,10 @@ int reactUnfit(int numberOfCreatures) {
     bool allRoomsFull = false;
 
     //If there are no available rooms to move to, we need to know so we can have the creature drill out
-    if((currentRoom->northRoomId == -1 || currentRoom->northRoomId == currentRoom->id) &&
-       (currentRoom->southRoomId == -1 || currentRoom->southRoomId == currentRoom->id) &&
-       (currentRoom->eastRoomId == -1 || currentRoom->eastRoomId == currentRoom->id) &&
-       (currentRoom->westRoomId == -1 || currentRoom->westRoomId == currentRoom->id)
+    if((currentRoom->northRoomId == -1) &&
+       (currentRoom->southRoomId == -1) &&
+       (currentRoom->eastRoomId == -1) &&
+       (currentRoom->westRoomId == -1)
       )
     {
         allRoomsFull = true;
@@ -644,8 +644,25 @@ int reactUnfit(int numberOfCreatures) {
 
             //Try to go through each room in the array - we can return if we found what we need
             for(int i = 0; i<4; i++) {
-                if(roomIdArray[i] != -1 && roomIdArray[i] != currentRoom->id) {
+                if(roomIdArray[i] != -1) {
+                    if(roomIdArray[i] == currentRoom->id) {
+                        if(currentCreature->creatureType == 2 && currentRoom->state == 0) {
+                            printf("Creature with ID %i pops back into the room and decides to make a mess!\n", currentCreature->id);
+                            alterRoomState(currentCreature->id, false, numberOfCreatures, true, false);
+                            //Room is suitable for everyone now (state should be 1) - we can stop
+                            return 0;
+                        }
+
+                        if(currentCreature->creatureType == 1 && currentRoom->state == 2) {
+                            printf("Creature with ID %i pops back into the room and decides to clean up!\n", currentCreature->id);
+                            alterRoomState(currentCreature->id, true, numberOfCreatures, true, false);
+                            //Room is suitable for everyone now (state should be 1) - we can stop
+                            return 0;
+                        }
+
+                    }
                     nextRoomPointer = getRoomPointerFromId(roomIdArray[i]);
+
                     int responseCode =  move(nextRoomPointer->id, currentCreature->id, true, numberOfCreatures);
 
                     if(responseCode == 0 || responseCode == 1) {
@@ -666,7 +683,7 @@ int reactUnfit(int numberOfCreatures) {
                 //Here's where the creature would drill out of the house
                 //We don't return here - any other creatures needing to leave due to room conditions still
                 //need to do so
-                printf("All other rooms are full! Creature with ID #%i drills out of the house due to your negligence!\n", currentCreature->id);
+                printf("Creature can't move to a room! Creature with ID #%i drills out of the house due to your negligence!\n", currentCreature->id);
                 currentRoom->creatures[i] = NULL;
                 reactCreatureDrill();
             } else {
