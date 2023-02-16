@@ -135,7 +135,7 @@ int main() {
     }
     //Here we gooooo!!!
     bool isUserExit = false;
-    int max_size = 12;
+    int max_size = 14; //it has to be this long to handle "get ye flask"
     char *command = malloc(max_size);
 
     getchar();
@@ -267,6 +267,11 @@ bool commandHandler(int max_size, char *command, int pcId, int numberOfCreatures
         char* action = strtok(NULL, " ");
         //printf("Action: %s\n", action);
         //printf("Creature ID: %s\n", creatureId);
+
+        if(action == NULL) {
+            printf("Invalid command. Type \"help\" for a list of commands.\n");
+            return false;
+        }
 
         // MAKING CREATURES CLEAN AND DIRTY THE ROOM
         if(strcmp(action, "clean") == 0) {
