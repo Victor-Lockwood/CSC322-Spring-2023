@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#define ROOM_CAPACITY 10
+
 
 // *** STRUCTS ***
 struct Creature {
@@ -55,6 +57,9 @@ void alterRoomState(int, bool, int, bool, bool);
 int move(int, int, bool, int);
 
 // Helper functions
+
+// I've been a fool.  Made mistakes.  Monumental ones.  I really don't need these first two, but here they
+// remain as a reminder of my hubris
 struct Room *getRoomPointerFromId(int);
 struct Creature *getCreaturePointerFromId(int);
 
@@ -64,13 +69,13 @@ void reactCreatureDrill();
 
 // *** GLOBALS ***
 
-//Pointer to the first element in the array of creatures
+//Pointer to the array of creatures
 struct Creature *creatures;
 
-//Pointer to the first element in the array of rooms
+//Pointer to the array of rooms
 struct Room *rooms;
 
-//Pointer to the room the PC is currently in
+//Pointer to the PC is currently in
 struct Room *currentRoom = NULL;
 
 //Main metric of the game
@@ -366,7 +371,7 @@ void initializeRooms(int numberOfRooms) {
 // The array is dynamically allocated and must be freed when no longer in use.
 int initializeCreatures(int numberOfCreatures) {
     creatures = malloc((numberOfCreatures + 1) * sizeof(struct Creature));
-    int roomCapacity = 10;
+
     int pcId = -1;
 
     //rooms[0].creatures[0] = &creatures[0];
@@ -392,7 +397,7 @@ int initializeCreatures(int numberOfCreatures) {
 
         //Stick the creature's pointer into the first empty slot
         //of the pointer array of the room it's associated with
-        for(int j = 0; j < roomCapacity; j++) {
+        for(int j = 0; j < ROOM_CAPACITY; j++) {
 
             if(activeRoom->creatures[j] == NULL) {
                 activeRoom->creatures[j] = activeCreaturePointer;
@@ -473,8 +478,6 @@ void look() {
 // Cleans the current room.  If creatureId
 // is not that of the PC, have the specified creature clean.
 void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool isAutoAction, bool isMove){
-    int roomCapacity = 10;
-
 
     struct Creature *creaturePointer = getCreaturePointerFromId(creatureId);
 
@@ -531,7 +534,7 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
         // Loop through the current room's creatures, have them react accordingly
         // Only react if it's the current room, though
         if(roomToCleanPointer == currentRoom) {
-            for(int i = 0; i<roomCapacity; i++) {
+            for(int i = 0; i<ROOM_CAPACITY; i++) {
                 if(roomToCleanPointer->creatures[i] != NULL) {
                     if(roomToCleanPointer->creatures[i] != creaturePointer) {
 
@@ -577,9 +580,7 @@ void alterRoomState(int creatureId, bool isClean, int numberOfCreatures, bool is
 int reactUnfit(int numberOfCreatures) {
     int r = rand() % 3;
 
-    int roomCapacity = 10;
     bool allRoomsFull = false;
-
 
     //If there are no available rooms to move to, we need to know so we can have the creature drill out
     if((currentRoom->northRoomId == -1 || currentRoom->northRoomId == currentRoom->id) &&
@@ -594,11 +595,13 @@ int reactUnfit(int numberOfCreatures) {
     struct Room *nextRoomPointer = NULL;
 
     //Loop through creatures in the room
-    for(int i=0; i<roomCapacity; i++) {
+    for(int i=0; i<ROOM_CAPACITY; i++) {
         if((currentRoom->creatures[i] == NULL) || (currentRoom->creatures[i]->creatureType == 0)) continue;
         struct Creature *currentCreature = currentRoom->creatures[i];
         if((currentCreature->creatureType == 2 && currentRoom->state == 0) ||
            (currentCreature->creatureType == 1 && currentRoom->state == 2))   {
+            bool foundRoom = false;
+
             printf("Current room is unsuitable for creature with ID #%i!\n", currentCreature->id);
 
             // 4 failures means it's time to drill
@@ -640,13 +643,20 @@ int reactUnfit(int numberOfCreatures) {
                     nextRoomPointer = getRoomPointerFromId(roomIdArray[i]);
                     int responseCode =  move(nextRoomPointer->id, currentCreature->id, true, numberOfCreatures);
 
-                    if(responseCode == 0 || responseCode == 1) return 0;
+                    if(responseCode == 0 || responseCode == 1) {
+                        foundRoom = true;
+                        break;
+                    }
                     if(responseCode == -1) numberOfFailures++;
                 } else {
                     numberOfFailures++;
                 }
             }
 
+            if(foundRoom){
+                foundRoom = false;
+                continue;
+            }
             if(numberOfFailures == 4 || allRoomsFull) {
                 //Here's where the creature would drill out of the house
                 //We don't return here - any other creatures needing to leave due to room conditions still
@@ -667,9 +677,8 @@ int reactUnfit(int numberOfCreatures) {
 
 
 void reactCreatureDrill() {
-    int roomCapacity = 10;
 
-    for(int i = 0; i<roomCapacity; i++) {
+    for(int i = 0; i<ROOM_CAPACITY; i++) {
         if(currentRoom->creatures[i] != NULL) {
             if(currentRoom->creatures[i]->creatureType == 1) {
                 // Animals growl for chasing someone out
@@ -691,7 +700,6 @@ void reactCreatureDrill() {
 // isLeave marks whether this is a creature trying to leave a room due to bad conditions.  Set to false
 // when the PC is moving or trying to move another creature
 int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
-    int roomCapacity = 10;
 
     if(creatureId >= numberOfCreatures) {
         printf("Creature with ID #%i does not exist!\n", creatureId);
@@ -718,7 +726,7 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
 
     bool foundInOldSpace = false;
     // Clear out the creature's pointer from the old room
-    for(int i=0; i<roomCapacity; i++) {
+    for(int i=0; i<ROOM_CAPACITY; i++) {
         if(currentRoom->creatures[i] == creaturePointer) {
             oldRoomIndex = i;
             foundInOldSpace = true;
@@ -732,7 +740,7 @@ int move(int roomId, int creatureId, bool isLeave, int numberOfCreatures) {
     }
 
     // Make sure the new room has enough space to stick the creature in
-    for(int i=0; i<roomCapacity; i++) {
+    for(int i=0; i<ROOM_CAPACITY; i++) {
         if(newRoomPointer->creatures[i] == NULL) {
             newRoomPointer->creatures[i] = creaturePointer;
             foundSpace = true;
