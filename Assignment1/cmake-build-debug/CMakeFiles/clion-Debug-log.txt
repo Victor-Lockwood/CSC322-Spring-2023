@@ -1,10 +1,4 @@
-/snap/clion/222/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" -S /home/victor/CLionProjects/CSC322-Spring-2022/Assignment1 -B /home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug
--- The C compiler identification is GNU 11.3.0
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working C compiler: /usr/bin/cc - skipped
--- Detecting C compile features
--- Detecting C compile features - done
+/snap/clion/234/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" -S /home/victor/CLionProjects/CSC322-Spring-2022/Assignment1 -B /home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug
 -- Configuring done
 -- Generating done
 -- Build files have been written to: /home/victor/CLionProjects/CSC322-Spring-2022/Assignment1/cmake-build-debug
