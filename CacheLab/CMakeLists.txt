@@ -4,3 +4,7 @@ project(CacheLab C)
 set(CMAKE_C_STANDARD 11)
 
 add_executable(CacheLab main.c)
+
+
+
+target_link_libraries(CacheLab PRIVATE m)
