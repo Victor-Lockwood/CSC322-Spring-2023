@@ -3,35 +3,114 @@
 #include <string.h>
 #include <stdlib.h>
 
-// ** GLOBALS **
-int *cache;
+// *** GLOBALS ***
+
+// ** Main Cache Values **
+
+//The number of sets
+int S = 0;
+
+//The number of lines per set
+int E = 0;
+
+//The block size, in bytes
+int B = 0;
+
+//The number of address bits
+int m = 0;
+
+//TODO: Figure out what these are for
+int hitTime = 0;
+
+int missPenalty = 0;
+
+//Either LFU or LRU
+char replacementPolicy[3] = "LFU";
+
+
+// *** CALCULATED CACHE VALUES ***
+
+//The number of set index bits
+int s = 0;
+
+//The number of block offset bits
+int b = 0;
+
+//The number of tag bits
+int t = 0;
+
 
 // ** FUNCTION PROTOTYPES **
-void initializeCache(int, int, int, int, int, int, int);
+void initializeGlobals();
 
 int main() {
-    // *** MAIN CACHE VALUES ***
 
-    //The number of sets
-    int S = 0;
+    initializeGlobals();
 
-    //The number of lines per set
-    int E = 0;
+    //Valid bit, hit frequency, tag, set number and block bytes
+    typedef int line[4 + B];
 
-    //The block size, in bytes
-    int B = 0;
+    //Cache is an array of lines
+    line cache[S];
 
-    //The number of address bits
-    int m = 0;
+    for (int i = 0; i < S; i++) {
+        for (int j = 0; j < E; j++) {
+            cache[i][0] = 0;    //Valid bit is 0
+            cache[i][1] = 0;    //Hit frequency is 0
+            cache[i][2] = 0;    //TODO: Fill tag appropriately
+            cache[i][3] = i;    //Set numbers
 
-    //TODO: Figure out what these are for
-    int hitTime = 0;
+            //Everything else in a line are blocks
+        }
+    }
 
-    int missPenalty = 0;
+    unsigned short isDone = 0;
+    char input[64];
 
-    //Either LFU or LRU
-    char replacementPolicy[3] = "LFU";
+    unsigned int intInput = 0;
 
+    printf("You may now begin entering memory addresses.  When you are done, simply enter -1.\n");
+
+    while(!isDone) {
+        scanf("%s", input);
+
+        //Sketchy but I wanted the actual integer representation to be unsigned
+        if(strcmp(input, "-1") == 0) {
+            isDone = 1;
+        } else {
+            //Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
+            intInput = (unsigned int) strtol(input, NULL, 16);
+
+            //Gives us our block offset
+            //Will need to add 4 to it when actually indexing to account for the other slots taken
+            int blockOffsetShift = 32 - b;
+            unsigned int blockOffset = intInput << blockOffsetShift;
+            blockOffset = blockOffset >> blockOffsetShift;
+
+            //Gives us our set id
+            int setOffsetShift = 32 - (s + b);
+            unsigned int setNumber = intInput << setOffsetShift;
+            setNumber = setNumber >> setOffsetShift;
+            setNumber = setNumber >> b;
+
+            //Finally, get our tag
+            int tagOffsetShift = 32 - (t + s + b);
+            unsigned int tag = intInput << tagOffsetShift;
+            tag = tag >> tagOffsetShift;
+            tag = tag >> (s + b);
+
+            printf("-- Info for memory address %s --\n", input);
+            printf("Block offset: %x (%i)\n", blockOffset, blockOffset);
+            printf("Set ID: %x (%i)\n", setNumber, setNumber);
+            printf("Tag: %x (%i)\n", tag, tag);
+        }
+    }
+
+    return 0;
+}
+
+//Get user input to fill in the main parameters of the cache
+void initializeGlobals() {
     //Fill in those values
     printf("Please enter an integer value for S:\n");
     scanf("%i", &S);
@@ -63,16 +142,11 @@ int main() {
         }
     }
 
-    // *** CALCULATED CACHE VALUES ***
+    s = (int) log2((float) S);
 
-    //The number of set index bits
-    int s = (int) log2((float) S);
+    b = (int) log2((float) B);
 
-    //The number of block offset bits
-    int b = (int) log2((float) B);
-
-    //The number of tag bits
-    int t = m - (s + b);
+    t = m - (s + b);
 
     printf("\nTo recap, your cache can be described with:\n (%i, %i, %i, %i)\n", S, E, B, m);
     printf("\nAs a result, you have:\n");
@@ -80,52 +154,4 @@ int main() {
     printf("%i block offset bits and\n", b);
     printf("%i tag bits.\n", t);
     printf("\nYour replacement policy is %s, your hit time is %i and your miss penalty is %i.\n", replacementPolicy, hitTime, missPenalty);
-
-    initializeCache(S, E, B, m, s, b, t);
-
-    isDone = 0;
-    char input[2];
-
-    //We need this signed because of the -1, but we should be fine anyway since no memory addresses are negative
-    int intInput = 0;
-
-    printf("You may now begin entering memory addresses.  When you are done, simply enter -1.\n");
-
-    while(!isDone) {
-        scanf("%s", input);
-
-        //Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
-        intInput = strtol(input, NULL, 16);
-
-        if(intInput == -1) {
-            isDone = 1;
-        } else {
-            printf("%i\n", intInput);
-        }
-    }
-
-    free(cache);
-    return 0;
-}
-
-void initializeCache(int S, int E, int B, int m, int s, int b, int t) {
-    //Valid bit, hit frequency, tag, set number and block bytes
-    typedef int line[4 + B];
-
-    //Cache is an array of lines
-    //line cache[S];
-    cache = malloc(S * E * sizeof(line));
-
-    for (int i = 0; i < S; i++) {
-        for (int j = 0; j < E; j++) {
-            int arrayOffset = 4 * i;    //Four cells for sure to offset by
-            if(j > 0) arrayOffset *= j;
-            int blockArrayOffset = (i + j) * B;
-            arrayOffset += blockArrayOffset;
-            cache[i + j + arrayOffset] = 0;        //Valid bit is 0
-            cache[i + j + arrayOffset + 1] = 0;    //Hit frequency is 0
-            cache[i + j + arrayOffset + 2] = 0;    //TODO: Fill tag appropriately
-            cache[i + j + arrayOffset + 3] = i;    //Set numbers
-        }
-    }
 }
