@@ -127,7 +127,7 @@ int main() {
                         cache[i][0] = 1;
                         cache[i][2] = tag;
 
-                        for(int j = dataCells; j < (dataCells + B); j++) {
+                        for(int j = 0; j < B; j++) {
                             cache[i][dataCells + j] = intInput + j;
                         }
                     }
