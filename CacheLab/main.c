@@ -113,6 +113,7 @@ int main() {
 
             bool foundLine = false;
             //TODO: Continue with this, but make the optimized version for direct cache that gets the set directly
+            //TODO: Only works for direct cache rn
             for(int i = 0; i < totalLines; i++) {
                 if (cache[i][3] == setNumber) {
                     if (cache[i][0] == 1 && cache[i][2] == tag && cache[i][dataCells + blockOffset] == intInput) {
