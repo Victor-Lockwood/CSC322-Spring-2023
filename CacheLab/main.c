@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // *** GLOBALS ***
 
@@ -21,7 +22,6 @@ int m = 0;
 
 //TODO: Figure out what these are for
 int hitTime = 0;
-
 int missPenalty = 0;
 
 //Either LFU or LRU
@@ -47,24 +47,28 @@ int main() {
 
     initializeGlobals();
 
+    int totalLines = S * E;
+    int dataCells = 4;          //Number of cells for valid bit, frequency, tag and set number
+
     //Valid bit, hit frequency, tag, set number and block bytes
-    typedef int line[4 + B];
+    //TODO: Need to figure out when something was last used
+    typedef unsigned int line[dataCells + B];
 
     //Cache is an array of lines
-    line cache[S];
+    line cache[totalLines];
 
     for (int i = 0; i < S; i++) {
         for (int j = 0; j < E; j++) {
-            cache[i][0] = 0;    //Valid bit is 0
-            cache[i][1] = 0;    //Hit frequency is 0
-            cache[i][2] = 0;    //TODO: Fill tag appropriately
-            cache[i][3] = i;    //Set numbers
+            cache[i + j][0] = 0;   //Valid bit is 0
+            cache[i + j][1] = 0;   //Hit frequency is 0
+            cache[i + j][2] = 0;   //Tag
+            cache[i + j][3] = i;   //Set numbers
 
             //Everything else in a line are blocks
         }
     }
 
-    unsigned short isDone = 0;
+    bool isDone = false;
     char input[64];
 
     unsigned int intInput = 0;
@@ -99,10 +103,36 @@ int main() {
             tag = tag >> tagOffsetShift;
             tag = tag >> (s + b);
 
-            printf("-- Info for memory address %s --\n", input);
-            printf("Block offset: %x (%i)\n", blockOffset, blockOffset);
-            printf("Set ID: %x (%i)\n", setNumber, setNumber);
-            printf("Tag: %x (%i)\n", tag, tag);
+            // Debug stuff
+            // printf("-- Info for memory address %s --\n", input);
+            // printf("Block offset: %x (%i)\n", blockOffset, blockOffset);
+            // printf("Set ID: %x (%i)\n", setNumber, setNumber);
+            // printf("Tag: %x (%i)\n", tag, tag);
+
+            //Find the line the data would be stored in, if it exists
+
+            bool foundLine = false;
+            //TODO: Continue with this, but make the optimized version for direct cache that gets the set directly
+            //TODO: Something's busted in here and idk what
+            for(int i = 0; i < totalLines; i++) {
+                if (cache[i][3] == setNumber) {
+                    if (cache[i][0] == 1 && cache[i][2] == tag && cache[i][dataCells + blockOffset] == intInput) {
+                        // Got a hit!
+                        cache[i][1] += 1;
+                        printf("%s H\n", input);
+                    } else {
+                        //Got a miss - need to add to cache
+                        printf("%s M\n", input);
+
+                        cache[i][0] = 1;
+                        cache[i][2] = tag;
+
+                        for(int j = dataCells; j < (dataCells + B); j++) {
+                            cache[i][dataCells + j] = intInput + j;
+                        }
+                    }
+                }
+            }
         }
     }
 
