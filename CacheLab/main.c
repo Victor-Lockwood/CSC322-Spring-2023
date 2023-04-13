@@ -135,6 +135,7 @@ int main() {
                     if (cache[i][0] == 1 && cache[i][2] == tag) { //Check valid bit and tag
                         // Got a hit!
                         cache[i][1] += 1;
+                        cache[i][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
                         printf("%s H\n", input);
                     } else {
                         totalCycles += missPenalty;
@@ -146,7 +147,7 @@ int main() {
                         cache[i][0] = 1;
                         cache[i][1] += 1;
                         cache[i][2] = tag;
-                        cache[i][4] = totalCycles; //Lowest number will determine what to evict when LRU
+                        cache[i][4] = totalCycles;
                     }
                 }
             }
