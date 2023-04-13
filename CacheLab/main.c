@@ -49,7 +49,11 @@ int b = 0;
 //The number of tag bits
 int t = 0;
 
-int totalCycles = 0;
+//These are floats because we'll need to calculate the miss rate,
+//and integer division will result in 0
+float totalCycles = 0;
+
+float totalMissPenalty = 0;
 
 
 // ** FUNCTION PROTOTYPES **
@@ -93,8 +97,7 @@ int main() {
             //Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
             intInput = (unsigned int) strtol(input, NULL, 16);
 
-            //DON'T ACTUALLY NEED BLOCK OFFSET
-            //TODO: Clear blockoffset references - just need b for calculations
+            //DON'T ACTUALLY NEED BLOCK OFFSET -- we'll keep this here for kicks though
             //Gives us our block offset
             //Will need to add 4 to it when actually indexing to account for the other slots taken
             //int blockOffsetShift = 32 - b;
@@ -135,6 +138,7 @@ int main() {
                         printf("%s H\n", input);
                     } else {
                         totalCycles += missPenalty;
+                        totalMissPenalty += missPenalty;
 
                         //Got a miss - need to add to cache
                         printf("%s M\n", input);
@@ -149,10 +153,17 @@ int main() {
         }
     }
 
+    int missRate = 0;
+    if(totalMissPenalty > 0 && totalCycles > 0) {
+        missRate = (int) ( (totalMissPenalty / totalCycles) * 100 );
+    }
+
+    printf("%i %i", missRate, (int) totalCycles);
+
     return 0;
 }
 
-//Get user input to fill in the main parameters of the cache\
+//Get user input to fill in the main parameters of the cache\git push --set-upstream origin block-clearout
 //TODO: Clear out debug statements
 void initializeGlobals() {
     //Fill in those values
