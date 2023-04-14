@@ -9,7 +9,7 @@
 // *** TYPE DEFINITIONS ***
 
 //Valid bit, hit frequency, tag, set number and last cycle line was hit
-typedef unsigned int line[LINE_SIZE];
+typedef unsigned long line[LINE_SIZE];
 
 
 // *** GLOBALS ***
@@ -49,7 +49,7 @@ int b = 0;
 //The number of tag bits
 int t = 0;
 
-//These are floats because we'll need to calculate the miss rate,
+//These are doubles because we'll need to calculate the miss rate,
 //and integer division will result in 0
 double totalCycles = 0;
 double totalRuns = 0;
@@ -94,13 +94,13 @@ int main() {
             intInput = (unsigned int) strtol(input, NULL, 16);
 
             //Gives us our set id
-            unsigned int setNumber = intInput >> b; // Clear out block offset bits
-            unsigned int setMask = setNumber >> s;  // Clear out set bits
+            unsigned long setNumber = intInput >> b; // Clear out block offset bits
+            unsigned long setMask = setNumber >> s;  // Clear out set bits
             setMask = setMask << s;                 // Clear out s bits for mask
             setNumber = setNumber ^ setMask;        // xor the mask - only s bits should remain
 
-            unsigned int tag = intInput >> (b + s);
-            unsigned int tagMask = tag >> t;
+            unsigned long tag = intInput >> (b + s);
+            unsigned long tagMask = tag >> t;
             tagMask = tagMask << t;
             tag = tag ^ tagMask;
 
@@ -124,8 +124,7 @@ int main() {
                             // Got a hit!
                             // Tag and valid bit don't change
                             cache[i + j][1] += 1;
-                            cache[i +
-                                  j][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
+                            cache[i + j][4] = (unsigned long) totalCycles; //Lowest number will determine what to evict when LRU - need on every read
                             printf("%s H\n", input);
 
                             foundLine = true;
@@ -146,7 +145,7 @@ int main() {
                                 cache[i + j][0] = 1;
                                 cache[i + j][1] += 1;
                                 cache[i + j][2] = tag;
-                                cache[i + j][4] = totalCycles;
+                                cache[i + j][4] = (unsigned long) totalCycles;
 
                                 foundLine = true;
                                 break;
@@ -185,7 +184,7 @@ int main() {
                         cache[index][0] = 1;
                         cache[index][1] = 1;
                         cache[index][2] = tag;
-                        cache[index][4] = totalCycles;
+                        cache[index][4] = (unsigned long) totalCycles;
 
                         foundLine = true;
                     }
