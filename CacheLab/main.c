@@ -51,9 +51,9 @@ int t = 0;
 
 //These are floats because we'll need to calculate the miss rate,
 //and integer division will result in 0
-float totalCycles = 0;
-
-float totalMissPenalty = 0;
+double totalCycles = 0;
+double totalRuns = 0;
+double totalMisses = 0;
 
 
 // ** FUNCTION PROTOTYPES **
@@ -113,41 +113,92 @@ int main() {
             //Find the line the data would be stored in, if it exists
 
             bool foundLine = false;
-            //TODO: Continue with this, but make the optimized version for direct cache that gets the set directly
-            //TODO: Only works for direct cache rn
             totalCycles += hitTime;
+            totalRuns += 1;
 
             for(int i = 0; i < S; i++) {
-                for(int j = 0; j < E; j++) {
-                    if (cache[i][3] == setNumber) {
+                if( foundLine ) break;
+                if (cache[i][3] == setNumber) {
+                    for(int j = 0; j < E; j++) {
                         if (cache[i + j][0] == 1 && cache[i][2] == tag) { //Check valid bit and tag
                             // Got a hit!
                             // Tag and valid bit don't change
                             cache[i + j][1] += 1;
-                            cache[i + j][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
+                            cache[i +
+                                  j][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
                             printf("%s H\n", input);
-                        } else {
-                            totalCycles += missPenalty;
-                            totalMissPenalty += missPenalty;
 
-                            //Got a miss - need to add to cache
-                            printf("%s M\n", input);
-
-                            //TODO: Implement replacement policy
-                            cache[i + j][0] = 1;
-                            cache[i + j][1] += 1;
-                            cache[i + j][2] = tag;
-                            cache[i + j][4] = totalCycles;
+                            foundLine = true;
+                            break;
                         }
+                    }
+
+                    //If we get in here, we don't have what we need in the cache - we need to add it
+                    if(!foundLine) {
+                        for(int j = 0; j < E; j++) {
+                            if(cache[i + j][0] != 1){
+                                totalCycles += missPenalty;
+                                totalMisses += 1;
+
+                                //Got a miss - need to add to cache
+                                printf("%s M\n", input);
+
+                                cache[i + j][0] = 1;
+                                cache[i + j][1] += 1;
+                                cache[i + j][2] = tag;
+                                cache[i + j][4] = totalCycles;
+
+                                foundLine = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    //If we get in here, we don't have what we need in the cache and the set is full - need to evict a line
+                    if(!foundLine) {
+                        //Least recently used line
+                        unsigned int index = 0;
+                        unsigned int lowestVal = strcmp(replacementPolicy, "LRU") == 0 ? cache[i][4] : cache[i][1];
+
+                        for(int j = 0; j < E; j++) {
+                            // Get least recently used
+                            if(strcmp(replacementPolicy, "LRU") == 0) {
+                                if(cache[i + j][4] <= lowestVal) {  // Grab the last cycle hit
+                                    index = i + j;
+                                    lowestVal = cache[index][4];
+                                }
+                            } else {
+                                // Otherwise, get least frequently used
+                                if(cache[i + j][1] <= lowestVal) {  // Grab the frequency of hits
+                                    index = i + j;
+                                    lowestVal = cache[index][1];
+                                }
+                            }
+                        }
+
+                        totalCycles += missPenalty;
+                        totalMisses += 1;
+
+                        //Got a miss - need to add to cache
+                        printf("%s M\n", input);
+
+                        cache[index][0] = 1;
+                        cache[index][1] = 1;
+                        cache[index][2] = tag;
+                        cache[index][4] = totalCycles;
+
+                        foundLine = true;
                     }
                 }
             }
+
+            foundLine = false;
         }
     }
 
     int missRate = 0;
-    if(totalMissPenalty > 0 && totalCycles > 0) {
-        missRate = (int) ( (totalMissPenalty / totalCycles) * 100 );
+    if(totalMisses > 0 && totalCycles > 0) {
+        missRate = (int) round((totalMisses / totalRuns ) * 100);
     }
 
     printf("%i %i", missRate, (int) totalCycles);
