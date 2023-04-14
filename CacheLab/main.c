@@ -105,23 +105,31 @@ int main() {
             //blockOffset = blockOffset >> blockOffsetShift;
 
             //Gives us our set id
-            //TODO: Need to use masks instead, ints should also be longs
-            int setOffsetShift = 32 - (s + b);
-            unsigned int setNumber = intInput << setOffsetShift;
-            setNumber = setNumber >> setOffsetShift;
-            setNumber = setNumber >> b;
+            unsigned int setNumber = intInput >> b; // Clear out block offset bits
+            unsigned int setMask = setNumber >> s;
+            setMask = setMask << s;                 // Clear out s bits for mask
+            setNumber = setNumber ^ setMask;        // xor the mask - only s bits should remain
+
+            //int setOffsetShift = 32 - (s + b);
+            //unsigned int setNumber = intInput << setOffsetShift;
+            //setNumber = setNumber >> setOffsetShift;
+            //setNumber = setNumber >> b;
 
             //Finally, get our tag
-            int tagOffsetShift = 32 - (t + s + b);
-            unsigned int tag = intInput << tagOffsetShift;
-            tag = tag >> tagOffsetShift;
-            tag = tag >> (s + b);
+            //int tagOffsetShift = 32 - (t + s + b);
+            //unsigned int tag = intInput << tagOffsetShift;
+            //tag = tag >> tagOffsetShift;int
+            //tag = tag >> (s + b);
+            unsigned int tag = intInput >> (b + s);
+            unsigned int tagMask = tag >> t;
+            tagMask = tagMask << t;
+            tag = tag ^ tagMask;
 
             // Debug stuff
-            // printf("-- Info for memory address %s --\n", input);
-            // printf("Block offset: %x (%i)\n", blockOffset, blockOffset);
-            // printf("Set ID: %x (%i)\n", setNumber, setNumber);
-            // printf("Tag: %x (%i)\n", tag, tag);
+            //printf("-- Info for memory address %s --\n", input);
+            ////printf("Block offset: %x (%i)\n", blockOffset, blockOffset);
+            //printf("Set ID: %x (%i)\n", setNumber, setNumber);
+            //printf("Tag: %x (%i)\n", tag, tag);
 
             //Find the line the data would be stored in, if it exists
 
