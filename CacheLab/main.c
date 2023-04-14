@@ -75,8 +75,6 @@ int main() {
             cache[i + j][2] = 0;   //Tag
             cache[i + j][3] = i;   //Set numbers
             cache[i + j][4] = 0;   //Last cycle this was hit at
-
-            //Everything else in a line are blocks
         }
     }
 
@@ -84,8 +82,6 @@ int main() {
     char input[64];
 
     unsigned int intInput = 0;
-
-    printf("You may now begin entering memory addresses.  When you are done, simply enter -1.\n");
 
     while(!isDone) {
         scanf("%s", input);
@@ -97,29 +93,12 @@ int main() {
             //Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
             intInput = (unsigned int) strtol(input, NULL, 16);
 
-            //DON'T ACTUALLY NEED BLOCK OFFSET -- we'll keep this here for kicks though
-            //Gives us our block offset
-            //Will need to add 4 to it when actually indexing to account for the other slots taken
-            //int blockOffsetShift = 32 - b;
-            //unsigned int blockOffset = intInput << blockOffsetShift;
-            //blockOffset = blockOffset >> blockOffsetShift;
-
             //Gives us our set id
             unsigned int setNumber = intInput >> b; // Clear out block offset bits
-            unsigned int setMask = setNumber >> s;
+            unsigned int setMask = setNumber >> s;  // Clear out set bits
             setMask = setMask << s;                 // Clear out s bits for mask
             setNumber = setNumber ^ setMask;        // xor the mask - only s bits should remain
 
-            //int setOffsetShift = 32 - (s + b);
-            //unsigned int setNumber = intInput << setOffsetShift;
-            //setNumber = setNumber >> setOffsetShift;
-            //setNumber = setNumber >> b;
-
-            //Finally, get our tag
-            //int tagOffsetShift = 32 - (t + s + b);
-            //unsigned int tag = intInput << tagOffsetShift;
-            //tag = tag >> tagOffsetShift;int
-            //tag = tag >> (s + b);
             unsigned int tag = intInput >> (b + s);
             unsigned int tagMask = tag >> t;
             tagMask = tagMask << t;
@@ -138,24 +117,28 @@ int main() {
             //TODO: Only works for direct cache rn
             totalCycles += hitTime;
 
-            for(int i = 0; i < totalLines; i++) {
-                if (cache[i][3] == setNumber) {
-                    if (cache[i][0] == 1 && cache[i][2] == tag) { //Check valid bit and tag
-                        // Got a hit!
-                        cache[i][1] += 1;
-                        cache[i][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
-                        printf("%s H\n", input);
-                    } else {
-                        totalCycles += missPenalty;
-                        totalMissPenalty += missPenalty;
+            for(int i = 0; i < S; i++) {
+                for(int j = 0; j < E; j++) {
+                    if (cache[i][3] == setNumber) {
+                        if (cache[i + j][0] == 1 && cache[i][2] == tag) { //Check valid bit and tag
+                            // Got a hit!
+                            // Tag and valid bit don't change
+                            cache[i + j][1] += 1;
+                            cache[i + j][4] = totalCycles; //Lowest number will determine what to evict when LRU - need on every read
+                            printf("%s H\n", input);
+                        } else {
+                            totalCycles += missPenalty;
+                            totalMissPenalty += missPenalty;
 
-                        //Got a miss - need to add to cache
-                        printf("%s M\n", input);
+                            //Got a miss - need to add to cache
+                            printf("%s M\n", input);
 
-                        cache[i][0] = 1;
-                        cache[i][1] += 1;
-                        cache[i][2] = tag;
-                        cache[i][4] = totalCycles;
+                            //TODO: Implement replacement policy
+                            cache[i + j][0] = 1;
+                            cache[i + j][1] += 1;
+                            cache[i + j][2] = tag;
+                            cache[i + j][4] = totalCycles;
+                        }
                     }
                 }
             }
@@ -173,49 +156,18 @@ int main() {
 }
 
 //Get user input to fill in the main parameters of the cache\git push --set-upstream origin block-clearout
-//TODO: Clear out debug statements
 void initializeGlobals() {
-    //Fill in those values
-    printf("Please enter an integer value for S:\n");
+    // Input values
     scanf("%i", &S);
-
-    printf("Please enter an integer value for E:\n");
     scanf("%i", &E);
-
-    printf("Please enter an integer value for B:\n");
     scanf("%i", &B);
-
-    printf("Please enter an integer value for m:\n");
     scanf("%i", &m);
-
-    printf("Please enter an integer value for hit time:\n");
+    scanf("%s", replacementPolicy);
     scanf("%i", &hitTime);
-
-    printf("Please enter an integer value for miss penalty:\n");
     scanf("%i", &missPenalty);
 
-    unsigned short isDone = 0;
-    while (!isDone){
-        printf("Please enter the replacement policy:\n");
-        scanf("%s", replacementPolicy);
-
-        if(!(strcmp(replacementPolicy, "LFU") == 0 || strcmp(replacementPolicy, "LRU") == 0)) {
-            printf("Invalid replacement policy.  Options are LFU (Least Frequently Used) or LRU (Least Recently Used).\n");
-        } else {
-            isDone = 1;
-        }
-    }
-
+    // Calculated values
     s = (int) log2((float) S);
-
     b = (int) log2((float) B);
-
     t = m - (s + b);
-
-    printf("\nTo recap, your cache can be described with:\n (%i, %i, %i, %i)\n", S, E, B, m);
-    printf("\nAs a result, you have:\n");
-    printf("%i index bits,\n", s);
-    printf("%i block offset bits and\n", b);
-    printf("%i tag bits.\n", t);
-    printf("\nYour replacement policy is %s, your hit time is %i and your miss penalty is %i.\n", replacementPolicy, hitTime, missPenalty);
 }
