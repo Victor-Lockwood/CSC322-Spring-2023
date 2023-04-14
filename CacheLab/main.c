@@ -200,7 +200,7 @@ int main() {
         missRate = (int) round((totalMisses / totalRuns ) * 100);
     }
 
-    printf("%i %i", missRate, (int) totalCycles);
+    printf("%i %i\n", missRate, (int) totalCycles);
 
     return 0;
 }
