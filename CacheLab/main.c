@@ -65,7 +65,7 @@ int main() {
 
     int totalLines = S * E;
 
-    //Cache is an array of lines
+    // Cache is an array of lines
     line cache[totalLines];
 
     for (int i = 0; i < S; i++) {
@@ -86,19 +86,20 @@ int main() {
     while(!isDone) {
         scanf("%s", input);
 
-        //Sketchy but I wanted the actual integer representation to be unsigned
+        // Sketchy but I wanted the actual integer representation to be unsigned
         if(strcmp(input, "-1") == 0) {
             isDone = 1;
         } else {
-            //Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
+            // Referred to here: https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
             intInput = (unsigned int) strtol(input, NULL, 16);
 
-            //Gives us our set id
+            // Gives us our set id
             unsigned long setNumber = intInput >> b; // Clear out block offset bits
-            unsigned long setMask = setNumber >> s;  // Clear out set bits
-            setMask = setMask << s;                 // Clear out s bits for mask
-            setNumber = setNumber ^ setMask;        // xor the mask - only s bits should remain
+            unsigned long setMask = setNumber >> s;  // Clear out set bits for the mask
+            setMask = setMask << s;                  // Shift it back
+            setNumber = setNumber ^ setMask;         // xor the mask - only s bits should remain
 
+            // Gives us our tag
             unsigned long tag = intInput >> (b + s);
             unsigned long tagMask = tag >> t;
             tagMask = tagMask << t;
@@ -132,7 +133,7 @@ int main() {
                         }
                     }
 
-                    //If we get in here, we don't have what we need in the cache - we need to add it
+                    // If we get in here, we don't have what we need in the cache - we need to add it
                     if(!foundLine) {
                         for(int j = 0; j < E; j++) {
                             if(cache[i + j][0] != 1){
@@ -153,10 +154,10 @@ int main() {
                         }
                     }
 
-                    //If we get in here, we don't have what we need in the cache and the set is full - need to evict a line
+                    // If we get in here, we don't have what we need in the cache and the set is full - need to evict a line
                     if(!foundLine) {
-                        //Least recently used line
                         unsigned int index = 0;
+                        // Default to the first line in the set
                         unsigned int lowestVal = strcmp(replacementPolicy, "LRU") == 0 ? cache[i][4] : cache[i][1];
 
                         for(int j = 0; j < E; j++) {
@@ -178,7 +179,6 @@ int main() {
                         totalCycles += missPenalty;
                         totalMisses += 1;
 
-                        //Got a miss - need to add to cache
                         printf("%s M\n", input);
 
                         cache[index][0] = 1;
@@ -197,11 +197,12 @@ int main() {
 
     int missRate = 0;
     if(totalMisses > 0 && totalCycles > 0) {
-        missRate = (int) round((totalMisses / totalRuns ) * 100);
+        missRate = (int) round(( totalMisses / totalRuns ) * 100);
     }
 
     printf("%i %i\n", missRate, (int) totalCycles);
 
+    //Cave Johnson.  We're done here.
     return 0;
 }
 
