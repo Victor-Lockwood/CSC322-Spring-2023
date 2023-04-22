@@ -1,7 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
  * 
- * <Put your name and login ID here>
+ * Victor Lockwood - vlockwoo
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,18 +101,18 @@ int main(int argc, char **argv)
     /* Parse the command line */
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
         switch (c) {
-        case 'h':             /* print help message */
-            usage();
-	    break;
-        case 'v':             /* emit additional diagnostic info */
-            verbose = 1;
-	    break;
-        case 'p':             /* don't print a prompt */
-            emit_prompt = 0;  /* handy for automatic testing */
-	    break;
-	default:
-            usage();
-	}
+            case 'h':             /* print help message */
+                usage();
+                break;
+            case 'v':             /* emit additional diagnostic info */
+                verbose = 1;
+                break;
+            case 'p':             /* don't print a prompt */
+                emit_prompt = 0;  /* handy for automatic testing */
+                break;
+            default:
+                usage();
+        }
     }
 
     /* Install the signal handlers */
@@ -131,22 +131,22 @@ int main(int argc, char **argv)
     /* Execute the shell's read/eval loop */
     while (1) {
 
-	/* Read command line */
-	if (emit_prompt) {
-	    printf("%s", prompt);
-	    fflush(stdout);
-	}
-	if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
-	    app_error("fgets error");
-	if (feof(stdin)) { /* End of file (ctrl-d) */
-	    fflush(stdout);
-	    exit(0);
-	}
+        /* Read command line */
+        if (emit_prompt) {
+            printf("%s", prompt);
+            fflush(stdout);
+        }
+        if ((fgets(cmdline, MAXLINE, stdin) == NULL) && ferror(stdin))
+            app_error("fgets error");
+        if (feof(stdin)) { /* End of file (ctrl-d) */
+            fflush(stdout);
+            exit(0);
+        }
 
-	/* Evaluate the command line */
-	eval(cmdline);
-	fflush(stdout);
-	fflush(stdout);
+        /* Evaluate the command line */
+        eval(cmdline);
+        fflush(stdout);
+        fflush(stdout);
     } 
 
     exit(0); /* control never reaches here */
@@ -165,6 +165,36 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
+    char *argv[MAXARGS];    // Argument list
+    char buf[MAXLINE];      // Modified commandline
+    int bg;                 // Whether the job runs in the foreground or the background
+    pid_t pid;              // Process id
+
+    strcpy(buf, cmdline);
+    bg = parseline(buf, argv);
+    if(argv[0] == NULL) return; // Empty lines get ignored
+
+    if(!builtin_cmd(argv)) {    //Check if we don't have a built-in command
+        //TODO: Create wrapper function Fork
+        if((pid = fork()) == 0) {
+            if(execve(argv[0], argv, environ) < 0) {
+                printf("%s: Command not found.\n", argv[0]);
+                exit(0);
+            }
+        }
+
+        // Parent will wait for the foreground function to terminate
+        if(!bg) {
+            int status;
+
+            if(waitpid(pid, &status, 0) < 0) {
+                unix_error("waitfg: waitpid error");
+            } else {
+                printf("%d %s", pid, cmdline);
+            }
+        }
+    }
+
     return;
 }
 
@@ -186,32 +216,30 @@ int parseline(const char *cmdline, char **argv)
     strcpy(buf, cmdline);
     buf[strlen(buf)-1] = ' ';  /* replace trailing '\n' with space */
     while (*buf && (*buf == ' ')) /* ignore leading spaces */
-	buf++;
+	    buf++;
 
     /* Build the argv list */
     argc = 0;
     if (*buf == '\'') {
-	buf++;
-	delim = strchr(buf, '\'');
-    }
-    else {
-	delim = strchr(buf, ' ');
+        buf++;
+        delim = strchr(buf, '\'');
+    } else {
+	    delim = strchr(buf, ' ');
     }
 
     while (delim) {
-	argv[argc++] = buf;
-	*delim = '\0';
-	buf = delim + 1;
-	while (*buf && (*buf == ' ')) /* ignore spaces */
-	       buf++;
+        argv[argc++] = buf;
+        *delim = '\0';
+        buf = delim + 1;
+        while (*buf && (*buf == ' ')) /* ignore spaces */
+            buf++;
 
-	if (*buf == '\'') {
-	    buf++;
-	    delim = strchr(buf, '\'');
-	}
-	else {
-	    delim = strchr(buf, ' ');
-	}
+        if (*buf == '\'') {
+            buf++;
+            delim = strchr(buf, '\'');
+        } else {
+            delim = strchr(buf, ' ');
+        }
     }
     argv[argc] = NULL;
     
@@ -220,7 +248,7 @@ int parseline(const char *cmdline, char **argv)
 
     /* should the job run in the background? */
     if ((bg = (*argv[argc-1] == '&')) != 0) {
-	argv[--argc] = NULL;
+	    argv[--argc] = NULL;
     }
     return bg;
 }
@@ -231,6 +259,12 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
+    // Exit command
+    if(!strcmp(argv[0], "quit")) exit(0);
+
+    // Ignore & - this argument is to run jobs in the background
+    if(!strcmp(argv[0], "&")) return 1;
+
     return 0;     /* not a builtin command */
 }
 
