@@ -206,7 +206,7 @@ int main() {
     return 0;
 }
 
-//Get user input to fill in the main parameters of the cache\git push --set-upstream origin block-clearout
+//Get user input to fill in the main parameters of the cache
 void initializeGlobals() {
     // Input values
     scanf("%i", &S);
