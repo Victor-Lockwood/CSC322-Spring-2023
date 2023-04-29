@@ -175,7 +175,10 @@ void eval(char *cmdline)
     if(argv[0] == NULL) return; // Empty lines get ignored
 
     if(!builtin_cmd(argv)) {    //Check if we don't have a built-in command
+
+        //Remember: fork() returns 0 if you're in the child, something else if you're in the parent
         if((pid = fork()) == 0) {
+            setpgid(0, 0); // Creates a new process group for each child process
             if(execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
                 exit(0);
@@ -186,8 +189,11 @@ void eval(char *cmdline)
         if(!bg) {
             int status;
 
+            addjob(jobs, pid, FG, cmdline);
             if(waitpid(pid, &status, 0) < 0) {
                 unix_error("waitfg: waitpid error");
+            } else {
+                deletejob(jobs, pid);
             }
         } else {
             addjob(jobs, pid, BG, cmdline);
@@ -308,14 +314,22 @@ void sigchld_handler(int sig)
 }
 
 /* 
- * sigint_handler - The kernel sends a SIGINT to the shell whenver the
+ * sigint_handler - The kernel sends a SIGINT to the shell whenever the
  *    user types ctrl-c at the keyboard.  Catch it and send it along
  *    to the foreground job.  
  */
 void sigint_handler(int sig) 
 {
     pid_t fg = fgpid(jobs);
-    kill(fg, SIGKILL);
+    int jid = pid2jid(fg);
+
+    // Debug
+    //printf("PID:    %i\nJID:    %i\n", fg, jid);
+
+    kill(fg, SIGINT);
+    deletejob(jobs, fg);
+
+    printf("Job [%i] (%i) terminated by signal %i\n", jid, fg, sig);
 }
 
 /*
@@ -401,11 +415,11 @@ int deletejob(struct job_t *jobs, pid_t pid)
 	return 0;
 
     for (i = 0; i < MAXJOBS; i++) {
-	if (jobs[i].pid == pid) {
-	    clearjob(&jobs[i]);
-	    nextjid = maxjid(jobs)+1;
-	    return 1;
-	}
+        if (jobs[i].pid == pid) {
+            clearjob(&jobs[i]);
+            nextjid = maxjid(jobs)+1;
+            return 1;
+        }
     }
     return 0;
 }
@@ -465,24 +479,24 @@ void listjobs(struct job_t *jobs)
     int i;
     
     for (i = 0; i < MAXJOBS; i++) {
-	if (jobs[i].pid != 0) {
-	    printf("[%d] (%d) ", jobs[i].jid, jobs[i].pid);
-	    switch (jobs[i].state) {
-		case BG: 
-		    printf("Running ");
-		    break;
-		case FG: 
-		    printf("Foreground ");
-		    break;
-		case ST: 
-		    printf("Stopped ");
-		    break;
-	    default:
-		    printf("listjobs: Internal error: job[%d].state=%d ", 
-			   i, jobs[i].state);
-	    }
-	    printf("%s", jobs[i].cmdline);
-	}
+        if (jobs[i].pid != 0) {
+            printf("[%d] (%d) ", jobs[i].jid, jobs[i].pid);
+            switch (jobs[i].state) {
+            case BG:
+                printf("Running ");
+                break;
+            case FG:
+                printf("Foreground ");
+                break;
+            case ST:
+                printf("Stopped ");
+                break;
+            default:
+                printf("listjobs: Internal error: job[%d].state=%d ",
+                   i, jobs[i].state);
+            }
+            printf("%s", jobs[i].cmdline);
+        }
     }
 }
 /******************************
