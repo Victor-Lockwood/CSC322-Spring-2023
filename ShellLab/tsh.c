@@ -190,9 +190,9 @@ void eval(char *cmdline)
             int status;
 
             addjob(jobs, pid, FG, cmdline);
-            if(waitpid(pid, &status, 0) < 0) {
+            if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
                 unix_error("waitfg: waitpid error");
-            } else {
+            } else if (WIFEXITED(status)) { // Only delete if the job terminated
                 deletejob(jobs, pid);
             }
         } else {
@@ -326,10 +326,12 @@ void sigint_handler(int sig)
     // Debug
     //printf("PID:    %i\nJID:    %i\n", fg, jid);
 
-    kill(fg, SIGINT);
-    deletejob(jobs, fg);
+    if(fg > 0) {
+        kill(-fg, sig);
+        deletejob(jobs, fg);
 
-    printf("Job [%i] (%i) terminated by signal %i\n", jid, fg, sig);
+        printf("Job [%i] (%i) terminated by signal %i\n", jid, fg, sig);
+    }
 }
 
 /*
@@ -339,7 +341,20 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
-    return;
+    pid_t fg = fgpid(jobs);
+
+    if(fg > 0) {
+        struct job_t *fg_job = getjobpid(jobs, fg);
+
+        // Debug
+        //printf("PID:    %i\nJID:    %i\n", fg, fg_job->jid);
+
+        kill(-fg, sig);
+
+        fg_job->state = ST;
+
+        printf("Job [%i] (%i) stopped by signal %i\n", fg_job->jid, fg, sig);
+    }
 }
 
 /*********************
@@ -468,8 +483,8 @@ int pid2jid(pid_t pid)
 	return 0;
     for (i = 0; i < MAXJOBS; i++)
 	if (jobs[i].pid == pid) {
-            return jobs[i].jid;
-        }
+        return jobs[i].jid;
+    }
     return 0;
 }
 
