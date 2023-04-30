@@ -192,7 +192,7 @@ void eval(char *cmdline)
             addjob(jobs, pid, FG, cmdline);
             if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
                 unix_error("waitfg: waitpid error");
-            } else if (WIFEXITED(status)) { // Only delete if the job terminated
+            } else if (WIFEXITED(status)) { // Only delete if the job terminated.  Won't get in here for SIGINT
                 deletejob(jobs, pid);
             }
         } else {
@@ -330,7 +330,7 @@ void sigint_handler(int sig)
         kill(-fg, sig);
         deletejob(jobs, fg);
 
-        printf("Job [%i] (%i) terminated by signal %i\n", jid, fg, sig);
+        printf("\nJob [%i] (%i) terminated by signal %i\n", jid, fg, sig);
     }
 }
 
@@ -353,7 +353,7 @@ void sigtstp_handler(int sig)
 
         fg_job->state = ST;
 
-        printf("Job [%i] (%i) stopped by signal %i\n", fg_job->jid, fg, sig);
+        printf("\nJob [%i] (%i) stopped by signal %i\n", fg_job->jid, fg, sig);
     }
 }
 
