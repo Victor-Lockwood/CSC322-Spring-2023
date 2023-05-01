@@ -310,7 +310,21 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    return;
+    int olderno = errno;
+    pid_t pid;
+    int status;
+
+    while((pid = waitpid(-1, &status, 0)) > 0) {
+        deletejob(jobs, pid);
+    }
+
+    if(errno != ECHILD) {
+        printf("waitpid error");
+    }
+
+    // Idk why the book had this in
+    //sleep(1);
+    errno = olderno;
 }
 
 /* 
