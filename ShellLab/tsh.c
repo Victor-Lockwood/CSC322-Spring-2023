@@ -177,6 +177,7 @@ void eval(char *cmdline)
     if(!builtin_cmd(argv)) {    //Check if we don't have a built-in command
 
         //Remember: fork() returns 0 if you're in the child, something else if you're in the parent
+        //TODO: Block SIGCHLD - block, fork, maintenance around fork, unblock
         if((pid = fork()) == 0) {
             setpgid(0, 0); // Creates a new process group for each child process
             if(execve(argv[0], argv, environ) < 0) {
@@ -189,6 +190,7 @@ void eval(char *cmdline)
         if(!bg) {
             int status;
 
+            //TODO: Use waitfg
             addjob(jobs, pid, FG, cmdline);
             if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
                 unix_error("waitfg: waitpid error");
@@ -308,6 +310,7 @@ void waitfg(pid_t pid)
  *     available zombie children, but doesn't wait for any other
  *     currently running children to terminate.  
  */
+//TODO: Might be busted
 void sigchld_handler(int sig) 
 {
     int olderno = errno;
@@ -323,7 +326,7 @@ void sigchld_handler(int sig)
     }
 
     // Idk why the book had this in
-    //sleep(1);
+    sleep(1);
     errno = olderno;
 }
 
