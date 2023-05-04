@@ -176,29 +176,41 @@ void eval(char *cmdline)
 
     if(!builtin_cmd(argv)) {    //Check if we don't have a built-in command
 
-        //Remember: fork() returns 0 if you're in the child, something else if you're in the parent
+
         //TODO: Block SIGCHLD - block, fork, maintenance around fork, unblock
-        if((pid = fork()) == 0) {
+        sigset_t mask, prev_mask;
+
+        sigemptyset(&mask);
+        sigaddset(&mask, SIGCHLD);
+
+        //Block SIGCHLD before forking
+        sigprocmask(SIG_BLOCK, &mask, &prev_mask);
+        //Remember: fork() returns 0 if you're in the child, something else if you're in the parent
+        pid = fork();
+
+        if(pid == 0) {
+            //Unblock in child
+            sigprocmask(SIG_SETMASK, &prev_mask, NULL);
             setpgid(0, 0); // Creates a new process group for each child process
+
             if(execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
                 exit(0);
             }
+        } else {
+            sigprocmask(SIG_BLOCK, &mask, &prev_mask);
+            if(!bg) {
+                addjob(jobs, pid, FG, cmdline);
+            } else {
+                addjob(jobs, pid, BG, cmdline);
+            }
+            sigprocmask(SIG_SETMASK, &prev_mask, NULL);
         }
 
         // Parent will wait for the foreground function to terminate
         if(!bg) {
-            int status;
-
-            //TODO: Use waitfg
-            addjob(jobs, pid, FG, cmdline);
-            if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
-                unix_error("waitfg: waitpid error");
-            } else if (WIFEXITED(status)) { // Only delete if the job terminated.  Won't get in here for SIGINT
-                deletejob(jobs, pid);
-            }
+            waitfg(pid);
         } else {
-            addjob(jobs, pid, BG, cmdline);
             printf("[%d] (%d) %s", getjobpid(jobs, pid)->jid, pid, cmdline);
         }
     }
@@ -296,7 +308,13 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-    return;
+    int status;
+
+    if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
+        unix_error("waitfg: waitpid error");
+    } else if (WIFEXITED(status)) { // Only delete if the job terminated.  Won't get in here for SIGINT
+        deletejob(jobs, pid);
+    }
 }
 
 /*****************
@@ -310,15 +328,21 @@ void waitfg(pid_t pid)
  *     available zombie children, but doesn't wait for any other
  *     currently running children to terminate.  
  */
-//TODO: Might be busted
 void sigchld_handler(int sig) 
 {
+    printf("Got in child handler\n");
     int olderno = errno;
-    pid_t pid;
-    int status;
 
-    while((pid = waitpid(-1, &status, 0)) > 0) {
+    sigset_t mask_all, prev_all;
+    pid_t pid;
+
+    sigfillset(&mask_all);
+
+    while((pid = waitpid(-1, NULL, 0)) > 0) { // Reap zombie
+        sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
         deletejob(jobs, pid);
+        printf("Process %i reaped\n", pid);
+        sigprocmask(SIG_SETMASK, &prev_all, NULL);
     }
 
     if(errno != ECHILD) {
@@ -347,7 +371,7 @@ void sigint_handler(int sig)
         kill(-fg, sig);
         deletejob(jobs, fg);
 
-        printf("\nJob [%i] (%i) terminated by signal %i\n", jid, fg, sig);
+        printf("Job [%i] (%i) terminated by signal %i\n", jid, fg, sig);
     }
 }
 
@@ -370,7 +394,7 @@ void sigtstp_handler(int sig)
 
         fg_job->state = ST;
 
-        printf("\nJob [%i] (%i) stopped by signal %i\n", fg_job->jid, fg, sig);
+        printf("Job [%i] (%i) stopped by signal %i\n", fg_job->jid, fg, sig);
     }
 }
 
