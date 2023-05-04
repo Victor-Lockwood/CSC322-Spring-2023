@@ -327,7 +327,6 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    printf("Got in child handler\n");
     int olderno = errno;
 
     sigset_t mask_all, prev_all;
@@ -338,7 +337,6 @@ void sigchld_handler(int sig)
     while((pid = waitpid(-1, NULL, 0)) > 0) { // Reap zombie
         sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
         deletejob(jobs, pid);
-        printf("Process %i reaped\n", pid);
         sigprocmask(SIG_SETMASK, &prev_all, NULL);
     }
 
