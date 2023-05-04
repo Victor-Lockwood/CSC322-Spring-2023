@@ -175,9 +175,6 @@ void eval(char *cmdline)
     if(argv[0] == NULL) return; // Empty lines get ignored
 
     if(!builtin_cmd(argv)) {    //Check if we don't have a built-in command
-
-
-        //TODO: Block SIGCHLD - block, fork, maintenance around fork, unblock
         sigset_t mask, prev_mask;
 
         sigemptyset(&mask);
