@@ -289,7 +289,7 @@ int builtin_cmd(char **argv)
         return 1;
     }
 
-    if(!strcmp(argv[0], "bg")) {
+    if(!strcmp(argv[0], "bg") || !strcmp(argv[0], "fg")) {
         do_bgfg(argv);
 
         return 1;
@@ -304,15 +304,21 @@ int builtin_cmd(char **argv)
 void do_bgfg(char **argv) 
 {
     memmove(argv[1], argv[1]+1, strlen(argv[1]));
-
     struct job_t *current_job = getjobjid(jobs, atoi(argv[1]));
 
-    current_job->state = BG;
-    kill(current_job->pid, SIGCONT);
+    if(!strcmp(argv[0], "bg")) {
+        // Run stopped foreground process in background
+        current_job->state = BG;
+        kill(current_job->pid, SIGCONT);
 
-    printf("[%i] (%i) %s", current_job->jid, current_job->pid, current_job->cmdline);
+        printf("[%i] (%i) %s", current_job->jid, current_job->pid, current_job->cmdline);
+    } else {
+        //Run background process in foreground
+        current_job->state = FG;
+        kill(current_job->pid, SIGCONT);
+        waitfg(current_job->pid);
+    }
 
-    return;
 }
 
 /* 
