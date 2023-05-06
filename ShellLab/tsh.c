@@ -191,7 +191,7 @@ void eval(char *cmdline)
             setpgid(0, 0); // Creates a new process group for each child process
 
             if(execve(argv[0], argv, environ) < 0) {
-                printf("%s: Command not found.\n", argv[0]);
+                printf("%s: Command not found\n", argv[0]);
                 exit(0);
             }
         } else {
@@ -206,6 +206,7 @@ void eval(char *cmdline)
 
         // Parent will wait for the foreground function to terminate
         if(!bg) {
+            sigprocmask(SIG_SETMASK, &prev_mask, NULL);
             waitfg(pid);
         } else {
             printf("[%d] (%d) %s", getjobpid(jobs, pid)->jid, pid, cmdline);
@@ -303,8 +304,37 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv) 
 {
-    memmove(argv[1], argv[1]+1, strlen(argv[1]));
-    struct job_t *current_job = getjobjid(jobs, atoi(argv[1]));
+    struct job_t *current_job;
+    int id;
+
+    if(argv[1] == NULL) {
+        printf("%s command requires PID or %%jobid argument\n", argv[0]);
+        return;
+    } else if(argv[1][0] != '%') {
+        if((id = atoi(argv[1])) == 0 ) {
+            printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+            return;
+        }
+
+        if((current_job = getjobpid(jobs, id)) == NULL) {
+            printf("(%i): No such process\n", id);
+            return;
+        }
+    } else {
+        memmove(argv[1], argv[1]+1, strlen(argv[1]));
+
+        if((id = atoi(argv[1])) == 0 ) {
+            printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+            return;
+        }
+
+        if((current_job = getjobjid(jobs, id)) == NULL){
+            printf("%%%i: No such job\n", id);
+            return;
+        }
+    }
+
+
 
     if(!strcmp(argv[0], "bg")) {
         // Run stopped foreground process in background
@@ -315,8 +345,8 @@ void do_bgfg(char **argv)
     } else {
         //Run background process in foreground
         current_job->state = FG;
-        kill(current_job->pid, SIGCONT);
-        waitfg(current_job->pid);
+        kill(-current_job->pid, SIGCONT); // Need the "-" here to send to the whole group...
+        waitfg(current_job->pid);             // ...otherwise this will hang when it tries to wait for them all
     }
 
 }
@@ -327,9 +357,13 @@ void do_bgfg(char **argv)
 void waitfg(pid_t pid)
 {
     int status;
+    //printf("PID: %i\n", pid);
+    //printf("Get PGID: %i\n", getpgid(pid));
 
     if(waitpid(pid, &status, WUNTRACED) < 0) { // Need WUNTRACED or else it'll hang on a SIGTSTP
-        unix_error("waitfg: waitpid error");
+        if(errno != ECHILD) {
+            printf("waitpid error");
+        }
     } else if (WIFEXITED(status)) { // Only delete if the job terminated.  Won't get in here for SIGINT
         deletejob(jobs, pid);
     }
