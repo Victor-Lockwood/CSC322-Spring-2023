@@ -289,6 +289,12 @@ int builtin_cmd(char **argv)
         return 1;
     }
 
+    if(!strcmp(argv[0], "bg")) {
+        do_bgfg(argv);
+
+        return 1;
+    }
+
     return 0;     /* not a builtin command */
 }
 
@@ -297,6 +303,15 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv) 
 {
+    memmove(argv[1], argv[1]+1, strlen(argv[1]));
+
+    struct job_t *current_job = getjobjid(jobs, atoi(argv[1]));
+
+    current_job->state = BG;
+    kill(current_job->pid, SIGCONT);
+
+    printf("[%i] (%i) %s", current_job->jid, current_job->pid, current_job->cmdline);
+
     return;
 }
 
